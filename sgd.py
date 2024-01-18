@@ -113,6 +113,7 @@ def stochastic_gradient_descent_algorithm(init_point, dim_w, X, y, lam, sigma, d
                     row_norms = torch.norm(per_sample_grad,dim=1)
                     clipped_grad = per_sample_grad * ( M / row_norms).view(-1,1)
                     clipped_grad[row_norms <= M] = per_sample_grad[row_norms <= M]
+                    clipped_grad = clipped_grad.reshape(-1, dim_w, num_class)
                     clipped_grad = clipped_grad + lam * wi.repeat(X_batch.size(0),1, 1)
                     grad = clipped_grad.mean(0)
                     wi = wi.detach() - step * grad + np.sqrt(2 * step * sigma**2) * torch.randn(dim_w, num_class).to(device)
