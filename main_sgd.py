@@ -26,16 +26,24 @@ class Runner():
     def __init__(self, args):
         self.device = torch.device('cuda:'+str(args.gpu) if torch.cuda.is_available() else 'cpu')
         self.args = args
-        if args.dataset == 'MNIST':
+        if args.dataset == 'MNIST' or args.dataset == 'MNIST_multiclass':
             self.X_train, self.X_test, self.y_train, self.y_train_onehot, self.y_test = load_features(args)
             self.X_train = self.X_train[:11264]
             self.y_train = self.y_train[:11264]
             self.dim_w = 784
-        elif args.dataset == 'CIFAR10':
+            if args.dataset == 'MNIST':
+                self.num_class = 2
+            else:
+                self.num_class = 10
+        elif args.dataset == 'CIFAR10' or args.dataset == 'CIFAR10_multiclass':
             self.X_train, self.X_test, self.y_train, self.y_train_onehot, self.y_test = load_features(args)
             self.X_train = self.X_train[:9856]
             self.y_train = self.y_train[:9856]
             self.dim_w = 512
+            if args.dataset == 'CIFAR10':
+                self.num_class = 2
+            else:
+                self.num_class = 10
         # make the norm of x = 1, MNIST naturally satisfys
         self.X_train_norm = self.X_train.norm(dim=1, keepdim=True)
         self.X_train = self.X_train / self.X_train_norm
@@ -82,12 +90,15 @@ class Runner():
             if self.args.dataset == 'MNIST':
                 sigma_list = [0.005, 0.01, 0.05, 0.1]
                 burn_in_list = [1, 10, 20, 50, 100, 150, 200, 300, 500, 750, 1000]
+            elif self.args.dataset == 'MNIST_multiclass':
+                sigma_list = [0.005, 0.01, 0.05, 0.1]
+                burn_in_list = [1, 10, 20, 50, 100, 150, 200, 300, 500, 750, 1000]
             elif self.args.dataset == 'CIFAR10':
                 sigma_list = [0.005, 0.01, 0.05, 0.1]
                 burn_in_list = [1, 10, 20, 50, 100, 150, 200, 300, 500, 750, 1000]
             _ = self.search_burnin(sigma_list, burn_in_list)
         elif self.args.search_batch:
-            batch_list = [1, 2, 64, 128]
+            batch_list = [64, 128]
             burn_in_list = [1, 10, 20, 50, 100, 150, 200, 300, 500, 750, 1000]
             _ = self.search_batch(burn_in_list, batch_list)
         elif self.args.paint_utility_s:
@@ -223,18 +234,27 @@ class Runner():
                 w_init, time = self.run_stochastic_gradient_descent(None, X, y, step, sigma, len_list, 
                                                                     projection = projection, batch_size = batch_size, batch_idx = batch_idx)
                 time_list.append(time)
-                w_init = np.vstack(w_init)
+                if self.num_class == 2:
+                    w_init = np.vstack(w_init)
+                else:
+                    w_init = np.stack(w_init, axis = 0)
                 new_w_list.append(w_init)
                 accuracy = self.test_accuracy(w_init)
                 trial_list.append(accuracy)
         else:
             for trial_idx in tqdm(range(num_trial)):
-                w = w_list[trial_idx].reshape(-1)
+                if self.num_class == 2:
+                    w = w_list[trial_idx].reshape(-1)
+                elif self.num_class == 10:
+                    w = w_list[trial_idx].reshape(self.dim_w, -1)
                 w = torch.tensor(w)
                 new_w, time = self.run_stochastic_gradient_descent(w, X, y, step, sigma, len_list = 1,
                                                                    projection=projection, batch_size=batch_size, batch_idx = batch_idx)
                 time_list.append(time)
-                new_w = np.vstack(new_w)
+                if self.num_class == 2:
+                    new_w = np.vstack(new_w)
+                else:
+                    new_w = np.stack(new_w, axis = 0)
                 new_w_list.append(new_w)
                 accuracy = self.test_accuracy(new_w)
                 trial_list.append(accuracy)
@@ -302,16 +322,23 @@ class Runner():
                 
     def test_accuracy(self, w_list):
         w = torch.tensor(w_list[0])
-        # test accuracy (before removal)
-        pred = self.X_test.mv(w)
-        accuracy = pred.gt(0).eq(self.y_test.gt(0)).float().mean()
+        if self.num_class == 2:
+            pred = self.X_test.mv(w)
+            accuracy = pred.gt(0).eq(self.y_test.gt(0)).float().mean()
+        elif self.num_class == 10:
+            pred = torch.matmul(self.X_test.view(-1, 1, self.dim_w), w.unsqueeze(0))
+            _, y_pred = torch.max(pred.squeeze(1), dim = 1)
+            y_mask = self.y_test > 0
+            y_label = torch.nonzero(y_mask, as_tuple=True)[1]
+            accuracy = y_pred.eq(y_label).float().mean()
         return accuracy
     def run_stochastic_gradient_descent(self, init_point, X, y, burn_in, sigma, len_list, projection, batch_size, batch_idx):
         start_time = time.time()
         w_list = stochastic_gradient_descent_algorithm(init_point, self.dim_w, X, y, self.args.lam*self.n, sigma = sigma, 
                                                device = self.device, burn_in = burn_in, 
                                                len_list = len_list, step=self.eta, M = self.M, m = self.m,
-                                               projection = projection, batch_size = batch_size, batch_idx = batch_idx)
+                                               projection = projection, batch_size = batch_size, batch_idx = batch_idx,
+                                               num_class = self.num_class)
         end_time = time.time()
         return w_list, end_time - start_time
 
@@ -326,7 +353,7 @@ def main():
     parser.add_argument('--num-steps', type=int, default=10000, help='number of optimization steps')
     parser.add_argument('--train-mode', type=str, default='binary', help='train mode [ovr/binary]')
     parser.add_argument('--M', type = float, default = 1, help = 'set M-Lipschitz constant (norm of gradient)')
-    parser.add_argument('--projection', type = float, default = 10.0, help = 'set the weight projection radius')
+    parser.add_argument('--projection', type = float, default = 20.0, help = 'set the weight projection radius')
     parser.add_argument('--batch_size', type = int, default = 0, help = 'the batch size')
 
     parser.add_argument('--gpu', type = int, default = 6, help = 'gpu')

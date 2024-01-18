@@ -15,6 +15,15 @@ from torchvision import datasets, transforms, models
 from transformers import AutoTokenizer, AutoModel
 
 
+def transform_array(arr):
+    n = len(arr)
+    
+    result = torch.full((n, 10), 0)
+
+    for i, num in enumerate(arr):
+        result[int(i), int(num.item())] = 1
+
+    return result
 
 
 # constructs one-hot representations of labels
@@ -77,6 +86,23 @@ def load_features(args):
             #y_train = y_train[train_indices].eq(3).float()
             X_test = X_test[test_indices]
             y_test = y_test[test_indices].eq(3).float()
+        elif args.dataset == 'MNIST_multiclass':
+            trainset = datasets.MNIST(args.data_dir, train=True, download = True, transform=transforms.ToTensor())
+            testset = datasets.MNIST(args.data_dir, train=False, download = True, transform=transforms.ToTensor())
+            X_train = torch.zeros(len(trainset), 784)
+            y_train = torch.zeros(len(trainset))
+            X_test = torch.zeros(len(testset), 784)
+            y_test = torch.zeros(len(testset))
+            for i in range(len(trainset)):
+                x, y = trainset[i]
+                X_train[i] = x.view(784) - 0.5
+                y_train[i] = y
+            for i in range(len(testset)):
+                x, y = testset[i]
+                X_test[i] = x.view(784) - 0.5
+                y_test[i] = y
+            y_train = transform_array(y_train).float()
+            y_test = transform_array(y_test).float()
         elif args.dataset == 'CIFAR10':
             if not os.path.exists('./data/CIFAR10/train.pt'):
                 trainset = datasets.CIFAR10(args.data_dir, train=True, download = True, transform=cifar10_transform)
