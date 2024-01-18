@@ -8,7 +8,7 @@
 # search batch size and utility
 #nohup python -u main_sgd.py --lam 1e-7 --dataset MNIST --search_batch 1 --gpu 2 >./MNIST_LMC_search_batch_lam1e6.log 2>&1 </dev/null &
 #nohup python -u main_sgd.py --lam 1e-7 --dataset CIFAR10 --search_batch 1 --gpu 4 >./CIFAR10_LMC_search_batch_lam1e6.log 2>&1 </dev/null &
-nohup python -u main_sgd.py --lam 1e-7 --dataset MNIST_multiclass --search_batch 1 --gpu 1 >./MNIST_multiclass_LMC_search_batch_lam1e6.log 2>&1 </dev/null &
+nohup python -u main_sgd.py --lam 1e-7 --dataset MNIST_multiclass --search_batch 1 --gpu 1 >./MNIST_multiclass_LMC_search_batch_lam1e7.log 2>&1 </dev/null &
 
 # paint utility - s figure
 #nohup python -u main_lmc.py --lam 1e-6 --sigma 0.03 --dataset MNIST --paint_utility_s 1 --gpu 1 >./MNIST_LMC_paint_utility_s.log 2>&1 </dev/null &

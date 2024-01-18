@@ -108,7 +108,7 @@ def stochastic_gradient_descent_algorithm(init_point, dim_w, X, y, lam, sigma, d
                     X_batch = X[batch_idx[step_idx*batch_size:(step_idx + 1)*batch_size]]
                     y_batch = y[batch_idx[step_idx*batch_size:(step_idx + 1)*batch_size]]
                     z = torch.sigmoid(y_batch * torch.matmul(X_batch.unsqueeze(1), wi.unsqueeze(0)).squeeze(1))
-                    per_sample_grad = (X_batch.unsqeeze(1).expand(-1, 10, -1) * ((z-1) * y_batch).unsqueeze(-1)).transpose(1, 2)
+                    per_sample_grad = (X_batch.unsqueeze(1).expand(-1, 10, -1) * ((z-1) * y_batch).unsqueeze(-1)).transpose(1, 2)
                     per_sample_grad = per_sample_grad.reshape(-1, dim_w * num_class)
                     row_norms = torch.norm(per_sample_grad,dim=1)
                     clipped_grad = per_sample_grad * ( M / row_norms).view(-1,1)
