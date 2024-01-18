@@ -1,0 +1,12 @@
+Namespace(M=1, batch_size=0, data_dir='./data', dataset='MNIST', extractor='raw_feature', gpu=2, how_much_retrain=0, lam=1e-07, num_removes=1000, num_steps=10000, paint_unlearning_sigma=0, paint_utility_epsilon=0, paint_utility_s=0, projection=10.0, result_dir='./result', search_batch=1, search_burnin=0, sigma=0.03, train_mode='binary')
+Extracted features not found, loading raw features.
+number training data:11264
+L smooth constant0.2511264
+m strongly convex:0.0011264
+M lipschitz constant:1
+step size eta:7.964116875007964
+RDP constant delta:8.87784090909091e-05
+weight projection radius: 10.0
+batch size: 0
+have shuffled batch idx
+  0%|          | 0/100 [00:00<?, ?it/s]  1%|          | 1/100 [00:25<41:33, 25.19s/it]  2%|▏         | 2/100 [00:52<42:55, 26.28s/it]  3%|▎         | 3/100 [01:17<41:42, 25.79s/it]  4%|▍         | 4/100 [01:45<42:26, 26.52s/it]  5%|▌         | 5/100 [02:10<41:12, 26.02s/it]

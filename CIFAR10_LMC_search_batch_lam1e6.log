@@ -1,0 +1,12 @@
+Namespace(M=1, batch_size=0, data_dir='./data', dataset='CIFAR10', extractor='raw_feature', gpu=4, how_much_retrain=0, lam=1e-07, num_removes=1000, num_steps=10000, paint_unlearning_sigma=0, paint_utility_epsilon=0, paint_utility_s=0, projection=10.0, result_dir='./result', search_batch=1, search_burnin=0, sigma=0.03, train_mode='binary')
+Extracted features not found, loading raw features.
+number training data:9856
+L smooth constant0.2509856
+m strongly convex:0.0009855999999999999
+M lipschitz constant:1
+step size eta:7.968584651868475
+RDP constant delta:0.00010146103896103897
+weight projection radius: 10.0
+batch size: 0
+have shuffled batch idx
+  0%|          | 0/100 [00:00<?, ?it/s]  1%|          | 1/100 [00:20<34:35, 20.97s/it]  2%|▏         | 2/100 [00:43<35:48, 21.92s/it]  3%|▎         | 3/100 [01:03<34:19, 21.23s/it]  4%|▍         | 4/100 [01:26<34:30, 21.56s/it]  5%|▌         | 5/100 [01:48<34:51, 22.01s/it]  6%|▌         | 6/100 [02:09<33:30, 21.38s/it]  7%|▋         | 7/100 [02:31<33:38, 21.70s/it]
