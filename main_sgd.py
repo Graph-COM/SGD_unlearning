@@ -28,17 +28,20 @@ class Runner():
         self.args = args
         if args.dataset == 'MNIST' or args.dataset == 'MNIST_multiclass':
             self.X_train, self.X_test, self.y_train, self.y_train_onehot, self.y_test = load_features(args)
-            self.X_train = self.X_train[:11264]
-            self.y_train = self.y_train[:11264]
+            
             self.dim_w = 784
             if args.dataset == 'MNIST':
                 self.num_class = 2
+                self.X_train = self.X_train[:11264]
+                self.y_train = self.y_train[:11264]
             else:
                 self.num_class = 10
+                self.X_train = self.X_train[:56320]
+                self.y_train = self.y_train[:56320]
         elif args.dataset == 'CIFAR10' or args.dataset == 'CIFAR10_multiclass':
             self.X_train, self.X_test, self.y_train, self.y_train_onehot, self.y_test = load_features(args)
-            self.X_train = self.X_train[:9856]
-            self.y_train = self.y_train[:9856]
+            self.X_train = self.X_train[:9728]
+            self.y_train = self.y_train[:9728]
             self.dim_w = 512
             if args.dataset == 'CIFAR10':
                 self.num_class = 2
@@ -88,19 +91,91 @@ class Runner():
         if self.args.search_burnin:
             # this is for full-batch
             if self.args.dataset == 'MNIST':
-                sigma_list = [0.005, 0.01, 0.05, 0.1]
+                sigma_list = [0.03]
                 burn_in_list = [1, 10, 20, 50, 100, 150, 200, 300, 500, 750, 1000]
             elif self.args.dataset == 'MNIST_multiclass':
-                sigma_list = [0.005, 0.01, 0.05, 0.1]
-                burn_in_list = [1, 10, 20, 50, 100, 150, 200, 300, 500, 750, 1000]
+                sigma_list = [0.005, 0.01]
+                burn_in_list = [1, 10, 20, 50, 100, 150, 200]
             elif self.args.dataset == 'CIFAR10':
-                sigma_list = [0.005, 0.01, 0.05, 0.1]
+                sigma_list = [0.03]
                 burn_in_list = [1, 10, 20, 50, 100, 150, 200, 300, 500, 750, 1000]
             _ = self.search_burnin(sigma_list, burn_in_list)
         elif self.args.search_batch:
-            batch_list = [64, 128]
-            burn_in_list = [1, 10, 20, 50, 100, 150, 200, 300, 500, 750, 1000]
+            batch_list = [32, 64, 128, 256]
+            burn_in_list = [1, 2, 5, 10, 20, 50]
             _ = self.search_batch(burn_in_list, batch_list)
+        elif self.args.compare_baseline:
+            epsilon_list = [0.05, 0.1, 0.5, 1, 2, 5]
+            batch_list = [32, 128, 0]
+            create_nested_folder('./result/SGD/'+str(self.args.dataset)+'/baseline/')
+            X_train_removed, y_train_removed = self.get_removed_data(1)
+            target_k_list = [1]
+            for batch_size in batch_list:
+                # for each type of batch size
+                for target_k in target_k_list:
+                    # for each target k
+                    sigma_list = []
+                    for target_epsilon in epsilon_list:
+                        sigma_list.append(self.search_alpha(target_k, target_epsilon, batch_size))
+                    print('batch: '+str(batch_size)+'target k:'+str(target_k) + ' sigma: '+str(sigma_list))
+            import pdb; pdb.set_trace()
+            '''sigma_list = [x if x is not None else 7.450581596923812e-09 for x in sigma_list]
+            # know the required k, and epsilon, sigma
+            for epsilon, sigma in zip(epsilon_list, sigma_list):
+                lmc_learn_scratch_acc, mean_time, lmc_w_list = self.get_mean_performance(self.X_train, self.y_train, self.args.burn_in, self.args.sigma, None, len_list = 1, return_w = True)
+                print('SGD learn scratch acc: ' + str(np.mean(lmc_learn_scratch_acc)))
+                print('SGD learn scratch acc std: ' + str(np.std(lmc_learn_scratch_acc)))
+                np.save('./result/LMC/'+str(self.args.dataset)+'/baseline/'+str(target_k)+'/lmc_acc_learn_scratch'+str(epsilon)+'.npy', lmc_learn_scratch_acc)'''
+        elif self.args.sequential:
+            num_remove_list = [100]
+            num_step = num_remove_list[0]
+            target_epsilon = 1
+            create_nested_folder('./result/SGD/'+str(self.args.dataset)+'/sequential/')
+            sigma = 0.03
+            batch_list = [32, 128, 0]
+            
+            for batch_size in batch_list:
+                self.k_list = np.zeros(num_step+1).astype(int)
+                self.ZB_list = np.zeros(num_step+1)
+                self.ZB_list[0] = self.Z_B_loose(batch_size)
+                self.ZB_list[1] = self.Z_B_loose(batch_size)
+                k_1, _ = self.compute_k_loose(sigma, target_epsilon, batch_size)
+                self.k_list[1] = k_1
+                for step in tqdm(range(2, num_step + 1)):
+                    self.k_list[step] = 1
+                    self.ZB_list[step] = self.Z_B_sequential(step, batch_size, self.ZB_list[step - 1])
+                    epsilon_of_step = lambda alpha: self.epsilon_with_alpha_z(sigma, alpha, self.k_list[step], batch_size, self.ZB_list[step]) + (math.log(1 / float(self.delta))) / (alpha - 1)
+                    min_epsilon_step = minimize_scalar(epsilon_of_step, bounds=(1, 100000), method='bounded')
+                    while min_epsilon_step.fun > target_epsilon:
+                        self.k_list[step] = self.k_list[step] + 1
+                        epsilon_of_step = lambda alpha: self.epsilon_with_alpha_z(sigma, alpha, self.k_list[step], batch_size, self.ZB_list[step]) + (math.log(1 / float(self.delta))) / (alpha - 1)
+                        min_epsilon_step = minimize_scalar(epsilon_of_step, bounds=(1, 100000), method='bounded')
+                print('batch size: '+str(batch_size)+' k list: '+str(self.k_list)+' zb list: '+str(self.ZB_list))
+            import pdb; pdb.set_trace()
+
+
+        elif self.args.paint_utility_epsilon:
+            epsilon_list = [0.1, 0.5, 1, 2, 5]
+            batch_size_list = [32, 64, 128, 256, 0]
+            create_nested_folder('./result/SGD/'+str(self.args.dataset)+'/paint_utility_epsilon/')
+            for batch_size in batch_size_list:
+                '''accuracy_scratch_D, mean_time, w_list = self.get_mean_performance(self.X_train, self.y_train, self.args.burn_in, self.args.sigma, 
+                                                                              None, self.args.projection, batch_size, self.batch_idx, 
+                                                                              len_list = 1, return_w = True, )
+                np.save('./result/LMC/'+str(self.args.dataset)+'/paint_utility_epsilon/w_from_scratch_b'+str(batch_size)+'.npy', w_list)
+                np.save('./result/LMC/'+str(self.args.dataset)+'/paint_utility_epsilon/acc_scratch_D_b'+str(batch_size)+'.npy', accuracy_scratch_D)'''
+                # calculate K
+                K_dict, _ = self.search_finetune_step(self.args.sigma, epsilon_list, batch_size_list)
+                import pdb; pdb.set_trace()
+                np.save('./result/LMC/'+str(self.args.dataset)+'/paint_utility_epsilon/K_list.npy', K_dict)
+                for remove_idx, num_remove in enumerate(num_remove_list):
+                    K_list = []
+                    for epsilon in epsilon_list:
+                        X_train_removed, y_train_removed = self.get_removed_data(num_remove_list[remove_idx])
+                        accuracy_finetune, mean_time = self.get_mean_performance(X_train_removed, y_train_removed, K_dict[num_remove_list[remove_idx]][epsilon], self.args.sigma, w_list)
+                        create_nested_folder('./result/LMC/'+str(self.args.dataset)+'/paint_utility_epsilon/'+str(num_remove)+'/')
+                        np.save('./result/LMC/'+str(self.args.dataset)+'/paint_utility_epsilon/'+str(num_remove)+'/acc_finetune_epsilon'+str(epsilon)+'.npy', accuracy_finetune)
+                        K_list.append(K_dict[num_remove_list[0]][epsilon])
         elif self.args.paint_utility_s:
             num_remove_list = [1, 10, 50, 100, 500, 1000]
             accuracy_scratch_D, mean_time, w_list = self.get_mean_performance(self.X_train, self.y_train, self.args.burn_in, self.args.sigma, None, len_list = 1, return_w = True)
@@ -120,23 +195,7 @@ class Runner():
                     np.save('./result/LMC/'+str(self.args.dataset)+'/paint_utility_s/'+str(epsilon)+'/acc_finetune_remove'+str(num_remove)+'.npy', accuracy_finetune)
                     K_list.append(K_dict[num_remove][epsilon])
                 np.save('./result/LMC/'+str(self.args.dataset)+'/paint_utility_s/'+str(epsilon)+'/K_list.npy', K_list)
-        elif self.args.paint_utility_epsilon:
-            epsilon_list = [0.1, 0.5, 1, 2, 5]
-            num_remove_list = [1, 50, 100]
-            accuracy_scratch_D, mean_time, w_list = self.get_mean_performance(self.X_train, self.y_train, self.args.burn_in, self.args.sigma, None, len_list = 1, return_w = True)
-            np.save('./result/LMC/'+str(self.args.dataset)+'/paint_utility_epsilon/w_from_scratch.npy', w_list)
-            np.save('./result/LMC/'+str(self.args.dataset)+'/paint_utility_epsilon/acc_scratch_D.npy', accuracy_scratch_D)
-            # calculate K
-            K_dict, _ = self.search_finetune_step(self.args.sigma, epsilon_list, num_remove_list)
-            np.save('./result/LMC/'+str(self.args.dataset)+'/paint_utility_epsilon/K_list.npy', K_dict)
-            for remove_idx, num_remove in enumerate(num_remove_list):
-                K_list = []
-                for epsilon in epsilon_list:
-                    X_train_removed, y_train_removed = self.get_removed_data(num_remove_list[remove_idx])
-                    accuracy_finetune, mean_time = self.get_mean_performance(X_train_removed, y_train_removed, K_dict[num_remove_list[remove_idx]][epsilon], self.args.sigma, w_list)
-                    create_nested_folder('./result/LMC/'+str(self.args.dataset)+'/paint_utility_epsilon/'+str(num_remove)+'/')
-                    np.save('./result/LMC/'+str(self.args.dataset)+'/paint_utility_epsilon/'+str(num_remove)+'/acc_finetune_epsilon'+str(epsilon)+'.npy', accuracy_finetune)
-                    K_list.append(K_dict[num_remove_list[0]][epsilon])
+        
         elif self.args.paint_unlearning_sigma:
             num_remove_list = [100]
             epsilon_list = [1]
@@ -193,37 +252,81 @@ class Runner():
         X_train_removed = torch.cat((X_train_removed, new_X_train), 0)
         y_train_removed = torch.cat((y_train_removed, new_y_train))
         return X_train_removed, y_train_removed
-        
-    def epsilon_expression(self, K, sigma, eta, C_lsi, alpha, S, M, m, n, delta):
-        part_1 = math.exp(- (float(K) * m * float(eta)) / (alpha))
-        part_2 = (4 * alpha * float(S)**2 * float(M)**2) / (float(m) * float(sigma)**2 * float(n)**2)
-        part_3 = (math.log(1 / float(delta))) / (alpha - 1)
-        epsilon = part_1 * part_2 + part_3
-        return epsilon
     
-    def search_finetune_step(self, sigma, epsilon_list, num_remove_list):
-        C_lsi = 2 * self.args.sigma**2 / self.m
+    def epsilon_with_alpha_z(self, sigma, alpha, K, b, z):
+        if b == 0:
+            b = self.n
+        c = 1-self.eta*self.m
+        return alpha * z**2 / (2 * self.eta * sigma**2) * (c**2 - 1) / (1 - c**(-2 * K * self.n / b))
+    
+    def Z_B_sequential(self, step, b, previous_Zb):
+        if b == 0:
+            b = self.n
+        if step == 1:
+            return self.Z_B_loose(b)
+        else:
+            c = 1-self.eta*self.m
+            return previous_Zb * c**(self.k_list[step-1] * self.n / b) + self.Z_B_loose(b)
+
+    def epsilon_alpha_loose(self, sigma, alpha, K, b):
+        if b == 0:
+            b = self.n
+        c = 1-self.eta*self.m
+        return alpha * self.Z_B_loose(b)**2 / (2 * self.eta * sigma**2) * (c**2 - 1) / (1 - c**(-2 * K * self.n / b))
+    
+    def Z_B_loose(self, b):
+        if b == 0:
+            b = self.n
+        c = 1-self.eta*self.m
+        return 1/(1-c) * 2 * self.eta * self.M /b
+
+    def Z_B(self,j,b):
+        c = 1-self.eta*self.m
+        return 1/(1-c) * c**(self.n/b-j-1) * 2 * self.eta * self.M /b
+    
+    def compute_k_loose(self, sigma, target_epsilon, b):
+        k = 1
+        epsilon = lambda alpha: (self.epsilon_alpha_loose(sigma, alpha,k, b)+ np.log(self.n)/(alpha-1))
+        min_epsilon = minimize_scalar(epsilon, bounds=(1, 100000), method='bounded')
+        while min_epsilon.fun > target_epsilon:
+            k = k + 1
+            epsilon = lambda alpha: (self.epsilon_alpha_loose(sigma, alpha,k, b)+ np.log(self.n)/(alpha-1))
+            min_epsilon = minimize_scalar(epsilon, bounds=(1, 100000), method='bounded')
+        
+        #print(f'batch = {b}, epsilon={min_epsilon.fun}, alpha={min_epsilon.x}, loose K={k}')
+        return k, min_epsilon.x
+
+    def search_alpha(self, target_k, epsilon, batch_size, lower = 1e-15, upper = 0.5):
+        if batch_size == 0:
+            batch_size = self.n
+        if self.compute_k_loose(lower, epsilon, batch_size)[0] < target_k or self.compute_k_loose(upper, epsilon, batch_size)[0] > target_k:
+            print('not good upper lowers')
+            return
+        while upper - lower > 1e-8:
+            mid = (lower + upper) / 2
+            k, _ = self.compute_k_loose(mid, epsilon, batch_size)
+            if k <= target_k:
+                upper = mid
+            else:
+                lower = mid
+        return upper
+
+    def search_finetune_step(self, sigma, epsilon_list, batch_list):
         K_dict = {}
         alpha_dict = {}
-        for num_remove in num_remove_list:
+        for batch_size in batch_list:
+            if batch_size == 0:
+                batch_size = self.n
             K_list = {}
             alpha_list = {}
             for target_epsilon in epsilon_list:
-                K = 1
-                epsilon_of_alpha = lambda alpha: self.epsilon_expression(K, sigma, self.eta, C_lsi, alpha, num_remove, self.M, self.m, self.n, self.delta)
-                min_epsilon_with_k = minimize_scalar(epsilon_of_alpha, bounds=(1, 10000), method='bounded')
-                while min_epsilon_with_k.fun > target_epsilon:
-                    K = K + 10
-                    epsilon_of_alpha = lambda alpha: self.epsilon_expression(K, sigma, self.eta, C_lsi, alpha, num_remove, self.M, self.m, self.n, self.delta)
-                    min_epsilon_with_k = minimize_scalar(epsilon_of_alpha, bounds=(1, 10000), method='bounded')
+                K, alpha = self.compute_k_loose(sigma, target_epsilon, batch_size)
                 K_list[target_epsilon] = K
-                alpha_list[target_epsilon] = min_epsilon_with_k.x
-                print('num remove:'+str(num_remove)+'target epsilon: '+str(target_epsilon)+'K: '+str(K)+'alpha: '+str(min_epsilon_with_k.x))
-            K_dict[num_remove] = K_list
-            alpha_dict[num_remove] = alpha_list
+                alpha_list[target_epsilon] = alpha
+            K_dict[batch_size] = K_list
+            alpha_dict[batch_size] = alpha_list
         return K_dict, alpha_dict
-    def calculate_epsilon0(self, alpha, S, sigma):
-        return (4 * alpha * float(S)**2 * float(self.M)**2) / (float(self.m) * float(sigma)**2 * float(self.n)**2)
+    
 
     def get_mean_performance(self, X, y, step, sigma, w_list, projection, batch_size, batch_idx, len_list = 1, return_w = False, num_trial = 100):
         new_w_list = []
@@ -348,7 +451,7 @@ def main():
     parser.add_argument('--result-dir', type=str, default='./result', help='directory for saving results')
     parser.add_argument('--dataset', type=str, default='MNIST', help='[MNIST, 2dgaussian, kdgaussian]')
     parser.add_argument('--extractor', type=str, default='raw_feature', help='extractor type')
-    parser.add_argument('--lam', type=float, default=1e-7, help='L2 regularization')
+    parser.add_argument('--lam', type=float, default=1e-6, help='L2 regularization')
     parser.add_argument('--num-removes', type=int, default=1000, help='number of data points to remove')
     parser.add_argument('--num-steps', type=int, default=10000, help='number of optimization steps')
     parser.add_argument('--train-mode', type=str, default='binary', help='train mode [ovr/binary]')
@@ -365,6 +468,8 @@ def main():
     parser.add_argument('--paint_utility_epsilon', type = int, default = 0, help = 'paint utility - epsilon figure')
     parser.add_argument('--paint_unlearning_sigma', type = int, default = 0, help = 'paint unlearning utility - sigma figure')
     parser.add_argument('--how_much_retrain', type = int, default = 0, help = 'supplementary for unlearning sigma')
+    parser.add_argument('--compare_baseline', type = int, default = 0, help = 'compare with baseline')
+    parser.add_argument('--sequential', type = int, default = 0, help = 'sequential unlearni')
     args = parser.parse_args()
     print(args)
 
