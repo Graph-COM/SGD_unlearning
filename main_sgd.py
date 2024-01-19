@@ -105,8 +105,10 @@ class Runner():
             burn_in_list = [1, 2, 5, 10, 20, 50]
             _ = self.search_batch(burn_in_list, batch_list)
         elif self.args.compare_baseline:
+            # compare with the baseline (remove 1 data see sigma and utility)
             epsilon_list = [0.05, 0.1, 0.5, 1, 2, 5]
             batch_list = [32, 128, 0]
+            burn_in_list = [100, 100, 1000]
             create_nested_folder('./result/SGD/'+str(self.args.dataset)+'/baseline/')
             X_train_removed, y_train_removed = self.get_removed_data(1)
             target_k_list = [1]
@@ -118,14 +120,26 @@ class Runner():
                     for target_epsilon in epsilon_list:
                         sigma_list.append(self.search_alpha(target_k, target_epsilon, batch_size))
                     print('batch: '+str(batch_size)+'target k:'+str(target_k) + ' sigma: '+str(sigma_list))
-            import pdb; pdb.set_trace()
-            '''sigma_list = [x if x is not None else 7.450581596923812e-09 for x in sigma_list]
-            # know the required k, and epsilon, sigma
-            for epsilon, sigma in zip(epsilon_list, sigma_list):
-                lmc_learn_scratch_acc, mean_time, lmc_w_list = self.get_mean_performance(self.X_train, self.y_train, self.args.burn_in, self.args.sigma, None, len_list = 1, return_w = True)
-                print('SGD learn scratch acc: ' + str(np.mean(lmc_learn_scratch_acc)))
-                print('SGD learn scratch acc std: ' + str(np.std(lmc_learn_scratch_acc)))
-                np.save('./result/LMC/'+str(self.args.dataset)+'/baseline/'+str(target_k)+'/lmc_acc_learn_scratch'+str(epsilon)+'.npy', lmc_learn_scratch_acc)'''
+                # if it's none, then just take this value
+                sigma_list = [x if x is not None else 7.450581596923812e-09 for x in sigma_list]
+                # know the required k, and epsilon, sigma
+                for epsilon, sigma, burn_in in zip(epsilon_list, sigma_list, burn_in_list):
+                    create_nested_folder('./result/SGD/'+str(self.args.dataset)+'/baseline/'+str(target_k)+'/')
+                    sgd_learn_scratch_acc, mean_time, sgd_w_list = self.get_mean_performance(self.X_train, self.y_train, burn_in, sigma, None,
+                                                                                             self.projection, batch_size, self.batch_idx, len_list = 1, return_w = True)
+                    print('SGD learn scratch acc: ' + str(np.mean(sgd_learn_scratch_acc)))
+                    print('SGD learn scratch acc std: ' + str(np.std(sgd_learn_scratch_acc)))
+                    np.save('./result/SGD/'+str(self.args.dataset)+'/baseline/'+str(target_k)+'/sgd_acc_learn_scratch'+str(epsilon)+'.npy', sgd_learn_scratch_acc)
+                    sgd_unlearn_scratch_acc, mean_time = self.get_mean_performance(X_train_removed, y_train_removed, burn_in, sigma, None, 
+                                                                                   self.projection, batch_size, self.batch_idx, len_list = 1)
+                    print('SGD unlearn scratch acc: ' + str(np.mean(sgd_unlearn_scratch_acc)))
+                    print('SGD unlearn scratch acc std: ' + str(np.std(sgd_unlearn_scratch_acc)))
+                    np.save('./result/SGD/'+str(self.args.dataset)+'/baseline/'+str(target_k)+'/sgd_acc_unlearn_scratch'+str(epsilon)+'.npy', sgd_unlearn_scratch_acc)
+                    sgd_unlearn_finetune_acc, mean_time = self.get_mean_performance(X_train_removed, y_train_removed, target_k_list[0], sigma, sgd_w_list,
+                                                                                    self.projection, batch_size, self.batch_idx, len_list = 1)
+                    print('SGD unlearn finetune acc: ' + str(np.mean(sgd_unlearn_finetune_acc)))
+                    print('SGD unlearn finetune acc std: ' + str(np.std(sgd_unlearn_finetune_acc)))
+                    np.save('./result/SGD/'+str(self.args.dataset)+'/baseline/'+str(target_k)+'/sgd_acc_unlearn_finetune'+str(epsilon)+'.npy', sgd_unlearn_finetune_acc)
         elif self.args.sequential:
             num_remove_list = [100]
             num_step = num_remove_list[0]
@@ -133,8 +147,10 @@ class Runner():
             create_nested_folder('./result/SGD/'+str(self.args.dataset)+'/sequential/')
             sigma = 0.03
             batch_list = [32, 128, 0]
+            burn_in_list = [100, 100, 1000]
             
-            for batch_size in batch_list:
+            for batch_size, burn_in in zip(batch_list, burn_in_list):
+                print('working on batch size '+str(batch_size))
                 self.k_list = np.zeros(num_step+1).astype(int)
                 self.ZB_list = np.zeros(num_step+1)
                 self.ZB_list[0] = self.Z_B_loose(batch_size)
@@ -151,12 +167,74 @@ class Runner():
                         epsilon_of_step = lambda alpha: self.epsilon_with_alpha_z(sigma, alpha, self.k_list[step], batch_size, self.ZB_list[step]) + (math.log(1 / float(self.delta))) / (alpha - 1)
                         min_epsilon_step = minimize_scalar(epsilon_of_step, bounds=(1, 100000), method='bounded')
                 print('batch size: '+str(batch_size)+' k list: '+str(self.k_list)+' zb list: '+str(self.ZB_list))
+                np.save('./result/SGD/'+str(self.args.dataset)+'/sequential/'+'k_list_b'+str(batch_size)+'.npy', self.k_list)
+
+                # see utility
+                sgd_learn_scratch_acc, mean_time, sgd_w_list = self.get_mean_performance(self.X_train, self.y_train, burn_in, sigma, None,
+                                                                                        self.projection, batch_size, self.batch_idx, len_list = 1, return_w = True)
+                print('SGD learn scratch acc: ' + str(np.mean(sgd_learn_scratch_acc)))
+                print('SGD learn scratch acc std: ' + str(np.std(sgd_learn_scratch_acc)))
+                np.save('./result/SGD/'+str(self.args.dataset)+'/sequential/sgd_acc_learn_scratch'+str(epsilon)+'.npy', sgd_learn_scratch_acc)
+                for sgd_step, sgd_k in enumerate(self.k_list):
+                    X_train_removed, y_train_removed = self.get_removed_data(int(sgd_step))
+                    sgd_unlearn_finetune_acc, mean_time, sgd_w_list = self.get_mean_performance(X_train_removed, y_train_removed, sgd_k, sigma, sgd_w_list, 
+                                                                                                self.projection, batch_size, self.batch_idx, len_list = 1, return_w = True)
+                    print('SGD unlearn finetune acc: ' + str(np.mean(sgd_unlearn_finetune_acc)))
+                    print('SGD unlearn finetune acc std: ' + str(np.std(sgd_unlearn_finetune_acc)))
+                    np.save('./result/SGD/'+str(self.args.dataset)+'/sequential/sgd_acc_finetune_b'+str(batch_size)+'_step'+str(sgd_step)+'.npy', sgd_unlearn_finetune_acc)
             import pdb; pdb.set_trace()
 
+        elif self.args.paint_unlearning_sigma:
+            num_remove_list = [100]
+            num_step = num_remove_list[0]
+            target_epsilon = 1
+            sigma_list = [0.05, 0.1, 0.2, 0.5, 1]
+            batch_list = [32, 128, 0]
+            burn_in_list = [100, 100, 1000]
+            create_nested_folder('./result/SGD/'+str(self.args.dataset)+'/paint_unlearning_sigma/')
+            for batch_size, burn_in in zip(batch_list, burn_in_list):
+                print('working on batch size '+str(batch_size))
+                for sigma in sigma_list:
+                    self.k_list = np.zeros(num_step+1).astype(int)
+                    self.ZB_list = np.zeros(num_step+1)
+                    self.ZB_list[0] = self.Z_B_loose(batch_size)
+                    self.ZB_list[1] = self.Z_B_loose(batch_size)
+                    k_1, _ = self.compute_k_loose(sigma, target_epsilon, batch_size)
+                    self.k_list[1] = k_1
+                    for step in tqdm(range(2, num_step + 1)):
+                        self.k_list[step] = 1
+                        self.ZB_list[step] = self.Z_B_sequential(step, batch_size, self.ZB_list[step - 1])
+                        epsilon_of_step = lambda alpha: self.epsilon_with_alpha_z(sigma, alpha, self.k_list[step], batch_size, self.ZB_list[step]) + (math.log(1 / float(self.delta))) / (alpha - 1)
+                        min_epsilon_step = minimize_scalar(epsilon_of_step, bounds=(1, 100000), method='bounded')
+                        while min_epsilon_step.fun > target_epsilon:
+                            self.k_list[step] = self.k_list[step] + 1
+                            epsilon_of_step = lambda alpha: self.epsilon_with_alpha_z(sigma, alpha, self.k_list[step], batch_size, self.ZB_list[step]) + (math.log(1 / float(self.delta))) / (alpha - 1)
+                            min_epsilon_step = minimize_scalar(epsilon_of_step, bounds=(1, 100000), method='bounded')
+                    print('batch size: '+str(batch_size)+'sigma: '+str(sigma)+' k list: '+str(self.k_list)+' zb list: '+str(self.ZB_list))
+                    np.save('./result/SGD/'+str(self.args.dataset)+'/paint_unlearning_sigma/'+'k_list_b'+str(batch_size)+'_sigma'+str(sigma)+'.npy', self.k_list)
+                    # see the utility
+                    sgd_learn_scratch_acc, mean_time, sgd_w_list = self.get_mean_performance(self.X_train, self.y_train, burn_in, sigma, None,
+                                                                                        self.projection, batch_size, self.batch_idx, len_list = 1, return_w = True)
+                    print('SGD learn scratch acc: ' + str(np.mean(sgd_learn_scratch_acc)))
+                    print('SGD learn scratch acc std: ' + str(np.std(sgd_learn_scratch_acc)))
+                    np.save('./result/SGD/'+str(self.args.dataset)+'/paint_unlearning_sigma/sgd_acc_learn_scratch_b'+str(batch_size)+'_sigma'+str(sigma)+'.npy', sgd_learn_scratch_acc)
 
+                    total_remove_x, total_remove_y = self.get_removed_data(num_remove_list[0])
+                    accuracy_scratch_Dnew, mean_time, unlearn_w_list = self.get_mean_performance(total_remove_x, total_remove_y, burn_in, sigma, None,
+                                                                                                self.projection, batch_size, self.batch_idx, return_w=True)
+                    np.save('./result/SGD/'+str(self.args.dataset)+'/paint_unlearning_sigma/sgd_acc_unlearn_scratch_b'+str(batch_size)+'_sigma'+str(sigma)+'.npy', accuracy_scratch_Dnew)
+                    for sgd_step, sgd_k in enumerate(self.k_list):
+                        X_train_removed, y_train_removed = self.get_removed_data(int(sgd_step))
+                        sgd_unlearn_finetune_acc, mean_time, sgd_w_list = self.get_mean_performance(X_train_removed, y_train_removed, sgd_k, sigma, sgd_w_list, 
+                                                                                                    self.projection, batch_size, self.batch_idx, len_list = 1, return_w = True)
+                        print('SGD unlearn finetune acc: ' + str(np.mean(sgd_unlearn_finetune_acc)))
+                        print('SGD unlearn finetune acc std: ' + str(np.std(sgd_unlearn_finetune_acc)))
+                        np.save('./result/SGD/'+str(self.args.dataset)+'/paint_unlearning_sigma/sgd_acc_finetune_b'+str(batch_size)+'_sigma'+str(sigma)+'_step'+str(sgd_step)+'.npy', sgd_unlearn_finetune_acc)
+                    
         elif self.args.paint_utility_epsilon:
             epsilon_list = [0.1, 0.5, 1, 2, 5]
             batch_size_list = [32, 64, 128, 256, 0]
+            num_remove_list = [1, 50, 100]
             create_nested_folder('./result/SGD/'+str(self.args.dataset)+'/paint_utility_epsilon/')
             for batch_size in batch_size_list:
                 '''accuracy_scratch_D, mean_time, w_list = self.get_mean_performance(self.X_train, self.y_train, self.args.burn_in, self.args.sigma, 
@@ -176,52 +254,7 @@ class Runner():
                         create_nested_folder('./result/LMC/'+str(self.args.dataset)+'/paint_utility_epsilon/'+str(num_remove)+'/')
                         np.save('./result/LMC/'+str(self.args.dataset)+'/paint_utility_epsilon/'+str(num_remove)+'/acc_finetune_epsilon'+str(epsilon)+'.npy', accuracy_finetune)
                         K_list.append(K_dict[num_remove_list[0]][epsilon])
-        elif self.args.paint_utility_s:
-            num_remove_list = [1, 10, 50, 100, 500, 1000]
-            accuracy_scratch_D, mean_time, w_list = self.get_mean_performance(self.X_train, self.y_train, self.args.burn_in, self.args.sigma, None, len_list = 1, return_w = True)
-            np.save('./result/LMC/'+str(self.args.dataset)+'/paint_utility_s/learn_scratch_w.npy', w_list)
-            np.save('./result/LMC/'+str(self.args.dataset)+'/paint_utility_s/acc_scratch_D.npy', accuracy_scratch_D)
-            # calculate K
-            epsilon_list = [0.5, 1, 2] # set epsilon = 1
-            K_dict, _ = self.search_finetune_step(self.args.sigma, epsilon_list, num_remove_list)
-            for epsilon_idx, epsilon in enumerate(epsilon_list):
-                K_list = []
-                for num_remove in num_remove_list:
-                    create_nested_folder('./result/LMC/'+str(self.args.dataset)+'/paint_utility_s/'+str(epsilon)+'/')
-                    X_train_removed, y_train_removed = self.get_removed_data(num_remove)
-                    accuracy_scratch_Dnew, mean_time = self.get_mean_performance(X_train_removed, y_train_removed, self.args.burn_in, self.args.sigma, None)
-                    np.save('./result/LMC/'+str(self.args.dataset)+'/paint_utility_s/'+str(epsilon)+'/acc_scratch_Dnew_remove'+str(num_remove)+'.npy', accuracy_scratch_Dnew)
-                    accuracy_finetune, mean_time = self.get_mean_performance(X_train_removed, y_train_removed, K_dict[num_remove][epsilon], self.args.sigma, w_list)
-                    np.save('./result/LMC/'+str(self.args.dataset)+'/paint_utility_s/'+str(epsilon)+'/acc_finetune_remove'+str(num_remove)+'.npy', accuracy_finetune)
-                    K_list.append(K_dict[num_remove][epsilon])
-                np.save('./result/LMC/'+str(self.args.dataset)+'/paint_utility_s/'+str(epsilon)+'/K_list.npy', K_list)
-        
-        elif self.args.paint_unlearning_sigma:
-            num_remove_list = [100]
-            epsilon_list = [1]
-            
-            sigma_list = [0.05, 0.1, 0.2, 0.5, 1]
-            scratch_acc_list = []
-            scratch_unlearn_list = []
-            finetune_unlearn_list = []
-            epsilon0_list = []
-            X_train_removed, y_train_removed = self.get_removed_data(num_remove_list[0])
-            for sigma in sigma_list:
-                K_dict, alpha_dict = self.search_finetune_step(sigma, epsilon_list, num_remove_list)
-                np.save('./result/LMC/'+str(self.args.dataset)+'/paint_unlearning_sigma/K_dict'+str(sigma)+'.npy', K_dict)
-                np.save('./result/LMC/'+str(self.args.dataset)+'/paint_unlearning_sigma/alpha_dict'+str(sigma)+'.npy', alpha_dict)
-                alpha = alpha_dict[num_remove_list[0]][epsilon_list[0]]
-                epsilon0 = self.calculate_epsilon0(alpha, num_remove_list[0], sigma)
-                epsilon0_list.append(epsilon0)
-                accuracy_scratch_D, mean_time, w_list = self.get_mean_performance(self.X_train, self.y_train, self.args.burn_in, sigma, None, len_list = 1, return_w = True)
-                np.save('./result/LMC/'+str(self.args.dataset)+'/paint_unlearning_sigma/'+str(sigma)+'_learn_scratch_w.npy', w_list)
-                np.save('./result/LMC/'+str(self.args.dataset)+'/paint_unlearning_sigma/'+str(sigma)+'_acc_scratch_D.npy', accuracy_scratch_D)
-                accuracy_scratch_Dnew, mean_time, unlearn_w_list = self.get_mean_performance(X_train_removed, y_train_removed, self.args.burn_in, sigma, None, return_w=True)
-                np.save('./result/LMC/'+str(self.args.dataset)+'/paint_unlearning_sigma/'+str(sigma)+'_unlearn_scratch_w.npy', unlearn_w_list)
-                np.save('./result/LMC/'+str(self.args.dataset)+'/paint_unlearning_sigma/'+str(sigma)+'_acc_scratch_Dnew.npy', accuracy_scratch_Dnew)
-                accuracy_finetune, mean_time = self.get_mean_performance(X_train_removed, y_train_removed, K_dict[num_remove_list[0]][1], sigma, w_list)
-                np.save('./result/LMC/'+str(self.args.dataset)+'/paint_unlearning_sigma/'+str(sigma)+'_acc_finetune.npy', accuracy_finetune)
-            np.save('./result/LMC/'+str(self.args.dataset)+'/paint_unlearning_sigma/epsilon0.npy', epsilon0_list)
+
         elif self.args.how_much_retrain == 1:
             sigma_list = [0.05, 0.1, 0.2, 0.5, 1]
             if self.args.dataset == 'MNIST':
@@ -461,6 +494,7 @@ def main():
 
     parser.add_argument('--gpu', type = int, default = 6, help = 'gpu')
     parser.add_argument('--sigma', type = float, default = 0.01, help = 'the parameter sigma')
+    parser.add_argument('--burn_in', type = int, default = 1000, help = 'burn in step number of LMC')
 
     parser.add_argument('--search_burnin', type = int, default = 0, help = 'whether grid search to paint for burn-in')
     parser.add_argument('--search_batch', type = int, default = 0, help = 'paint the batch size utility relation')
