@@ -104,18 +104,19 @@ class Runner():
                 burn_in_list = [1, 10, 20, 50, 100, 150, 200, 300, 500, 750, 1000]
             _ = self.search_burnin(sigma_list, burn_in_list)
         elif self.args.search_batch:
-            batch_list = [128, 256, 512, 0]
+            batch_list = [128, 256, 512]
             burn_in_list = [1, 2, 5, 10, 20, 50, 100, 200, 300, 500]
             _ = self.search_batch(burn_in_list, batch_list)
         elif self.args.compare_baseline:
             # compare with the baseline (remove 1 data see sigma and utility)
             epsilon_list = [0.05, 0.1, 0.5, 1, 2, 5]
-            batch_list = [128, 512, 0]
-            burn_in_list = [100, 500, 1000]
+            batch_list = [128, 256, 0]
+            burn_in_list = [100, 150, 1000]
             create_nested_folder('./result/SGD/'+str(self.args.dataset)+'/baseline/')
             X_train_removed, y_train_removed = self.get_removed_data(1)
             target_k_list = [1]
-            for batch_size in batch_list:
+            for batch_size, burn_in in zip(batch_list, burn_in_list):
+                print('working on batch:'+str(batch_size))
                 # for each type of batch size
                 for target_k in target_k_list:
                     # for each target k
@@ -126,7 +127,7 @@ class Runner():
                 # if it's none, then just take this value
                 sigma_list = [x if x is not None else 7.450581596923812e-9 for x in sigma_list]
                 # know the required k, and epsilon, sigma
-                for epsilon, sigma, burn_in in zip(epsilon_list, sigma_list, burn_in_list):
+                for epsilon, sigma in zip(epsilon_list, sigma_list):
                     print('working on epsilon:'+str(epsilon))
                     create_nested_folder('./result/SGD/'+str(self.args.dataset)+'/baseline/'+str(target_k)+'/')
                     sgd_learn_scratch_acc, mean_time, sgd_w_list = self.get_mean_performance(self.X_train, self.y_train, burn_in, sigma, None,
