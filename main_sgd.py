@@ -83,32 +83,35 @@ class Runner():
         print('batch size: '+str(self.batch_size))
         # give a fixed index to decide the batch list
         batch_idx = np.arange(self.n)
-        np.random.shuffle(batch_idx)
-        self.batch_idx = batch_idx
+        batch_idx_list = []
+        for trial_idx in range(100):
+            np.random.shuffle(batch_idx)
+            batch_idx_list.append(batch_idx.copy())
+        self.batch_idx = batch_idx_list
         print('have shuffled batch idx')
         
     def train(self):
         if self.args.search_burnin:
             # this is for full-batch
             if self.args.dataset == 'MNIST':
-                sigma_list = [0.03]
+                sigma_list = [0.001, 0.03]
                 burn_in_list = [1, 10, 20, 50, 100, 150, 200, 300, 500, 750, 1000]
             elif self.args.dataset == 'MNIST_multiclass':
                 sigma_list = [0.005, 0.01]
                 burn_in_list = [1, 10, 20, 50, 100, 150, 200]
             elif self.args.dataset == 'CIFAR10':
-                sigma_list = [0.03]
+                sigma_list = [0.001, 0.03]
                 burn_in_list = [1, 10, 20, 50, 100, 150, 200, 300, 500, 750, 1000]
             _ = self.search_burnin(sigma_list, burn_in_list)
         elif self.args.search_batch:
-            batch_list = [32, 64, 128, 256]
-            burn_in_list = [1, 2, 5, 10, 20, 50]
+            batch_list = [128, 256, 512, 0]
+            burn_in_list = [1, 2, 5, 10, 20, 50, 100, 200, 300, 500]
             _ = self.search_batch(burn_in_list, batch_list)
         elif self.args.compare_baseline:
             # compare with the baseline (remove 1 data see sigma and utility)
             epsilon_list = [0.05, 0.1, 0.5, 1, 2, 5]
-            batch_list = [32, 128, 0]
-            burn_in_list = [100, 100, 1000]
+            batch_list = [128, 512, 0]
+            burn_in_list = [100, 500, 1000]
             create_nested_folder('./result/SGD/'+str(self.args.dataset)+'/baseline/')
             X_train_removed, y_train_removed = self.get_removed_data(1)
             target_k_list = [1]
@@ -121,9 +124,10 @@ class Runner():
                         sigma_list.append(self.search_alpha(target_k, target_epsilon, batch_size))
                     print('batch: '+str(batch_size)+'target k:'+str(target_k) + ' sigma: '+str(sigma_list))
                 # if it's none, then just take this value
-                sigma_list = [x if x is not None else 7.450581596923812e-09 for x in sigma_list]
+                sigma_list = [x if x is not None else 7.450581596923812e-9 for x in sigma_list]
                 # know the required k, and epsilon, sigma
                 for epsilon, sigma, burn_in in zip(epsilon_list, sigma_list, burn_in_list):
+                    print('working on epsilon:'+str(epsilon))
                     create_nested_folder('./result/SGD/'+str(self.args.dataset)+'/baseline/'+str(target_k)+'/')
                     sgd_learn_scratch_acc, mean_time, sgd_w_list = self.get_mean_performance(self.X_train, self.y_train, burn_in, sigma, None,
                                                                                              self.projection, batch_size, self.batch_idx, len_list = 1, return_w = True)
@@ -331,7 +335,7 @@ class Runner():
         #print(f'batch = {b}, epsilon={min_epsilon.fun}, alpha={min_epsilon.x}, loose K={k}')
         return k, min_epsilon.x
 
-    def search_alpha(self, target_k, epsilon, batch_size, lower = 1e-15, upper = 0.5):
+    def search_alpha(self, target_k, epsilon, batch_size, lower = 1e-15, upper = 10.0):
         if batch_size == 0:
             batch_size = self.n
         if self.compute_k_loose(lower, epsilon, batch_size)[0] < target_k or self.compute_k_loose(upper, epsilon, batch_size)[0] > target_k:
@@ -370,7 +374,7 @@ class Runner():
         if w_list is None:
             for trial_idx in tqdm(range(num_trial)):
                 w_init, time = self.run_stochastic_gradient_descent(None, X, y, step, sigma, len_list, 
-                                                                    projection = projection, batch_size = batch_size, batch_idx = batch_idx)
+                                                                    projection = projection, batch_size = batch_size, batch_idx = batch_idx[trial_idx])
                 time_list.append(time)
                 if self.num_class == 2:
                     w_init = np.vstack(w_init)
@@ -387,7 +391,7 @@ class Runner():
                     w = w_list[trial_idx].reshape(self.dim_w, -1)
                 w = torch.tensor(w)
                 new_w, time = self.run_stochastic_gradient_descent(w, X, y, step, sigma, len_list = 1,
-                                                                   projection=projection, batch_size=batch_size, batch_idx = batch_idx)
+                                                                   projection=projection, batch_size=batch_size, batch_idx = batch_idx[trial_idx])
                 time_list.append(time)
                 if self.num_class == 2:
                     new_w = np.vstack(new_w)
