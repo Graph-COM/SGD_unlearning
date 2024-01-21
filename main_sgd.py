@@ -129,17 +129,17 @@ class Runner():
                                                                                              self.projection, batch_size, self.batch_idx, len_list = 1, return_w = True)
                     print('SGD learn scratch acc: ' + str(np.mean(sgd_learn_scratch_acc)))
                     print('SGD learn scratch acc std: ' + str(np.std(sgd_learn_scratch_acc)))
-                    np.save('./result/SGD/'+str(self.args.dataset)+'/baseline/'+str(target_k)+'/sgd_acc_learn_scratch'+str(epsilon)+'.npy', sgd_learn_scratch_acc)
+                    np.save('./result/SGD/'+str(self.args.dataset)+'/baseline/'+str(target_k)+'/sgd_acc_learn_scratch_b'+str(batch_size)+'_eps'+str(epsilon)+'.npy', sgd_learn_scratch_acc)
                     sgd_unlearn_scratch_acc, mean_time = self.get_mean_performance(X_train_removed, y_train_removed, burn_in, sigma, None, 
                                                                                    self.projection, batch_size, self.batch_idx, len_list = 1)
                     print('SGD unlearn scratch acc: ' + str(np.mean(sgd_unlearn_scratch_acc)))
                     print('SGD unlearn scratch acc std: ' + str(np.std(sgd_unlearn_scratch_acc)))
-                    np.save('./result/SGD/'+str(self.args.dataset)+'/baseline/'+str(target_k)+'/sgd_acc_unlearn_scratch'+str(epsilon)+'.npy', sgd_unlearn_scratch_acc)
+                    np.save('./result/SGD/'+str(self.args.dataset)+'/baseline/'+str(target_k)+'/sgd_acc_unlearn_scratch_b'+str(batch_size)+'_eps'+str(epsilon)+'.npy', sgd_unlearn_scratch_acc)
                     sgd_unlearn_finetune_acc, mean_time = self.get_mean_performance(X_train_removed, y_train_removed, target_k_list[0], sigma, sgd_w_list,
                                                                                     self.projection, batch_size, self.batch_idx, len_list = 1)
                     print('SGD unlearn finetune acc: ' + str(np.mean(sgd_unlearn_finetune_acc)))
                     print('SGD unlearn finetune acc std: ' + str(np.std(sgd_unlearn_finetune_acc)))
-                    np.save('./result/SGD/'+str(self.args.dataset)+'/baseline/'+str(target_k)+'/sgd_acc_unlearn_finetune'+str(epsilon)+'.npy', sgd_unlearn_finetune_acc)
+                    np.save('./result/SGD/'+str(self.args.dataset)+'/baseline/'+str(target_k)+'/sgd_acc_unlearn_finetune_b'+str(batch_size)+'_eps'+str(epsilon)+'.npy', sgd_unlearn_finetune_acc)
         elif self.args.sequential:
             num_remove_list = [100]
             num_step = num_remove_list[0]
@@ -174,14 +174,15 @@ class Runner():
                                                                                         self.projection, batch_size, self.batch_idx, len_list = 1, return_w = True)
                 print('SGD learn scratch acc: ' + str(np.mean(sgd_learn_scratch_acc)))
                 print('SGD learn scratch acc std: ' + str(np.std(sgd_learn_scratch_acc)))
-                np.save('./result/SGD/'+str(self.args.dataset)+'/sequential/sgd_acc_learn_scratch'+str(epsilon)+'.npy', sgd_learn_scratch_acc)
-                for sgd_step, sgd_k in enumerate(self.k_list):
-                    X_train_removed, y_train_removed = self.get_removed_data(int(sgd_step))
+                np.save('./result/SGD/'+str(self.args.dataset)+'/sequential/sgd_acc_learn_scratch_b'+str(batch_size)+'.npy', sgd_learn_scratch_acc)
+                for sgd_step in range(len(self.k_list)-1):
+                    sgd_k = self.k_list[sgd_step + 1]
+                    X_train_removed, y_train_removed = self.get_removed_data(int(sgd_step+1))
                     sgd_unlearn_finetune_acc, mean_time, sgd_w_list = self.get_mean_performance(X_train_removed, y_train_removed, sgd_k, sigma, sgd_w_list, 
                                                                                                 self.projection, batch_size, self.batch_idx, len_list = 1, return_w = True)
                     print('SGD unlearn finetune acc: ' + str(np.mean(sgd_unlearn_finetune_acc)))
                     print('SGD unlearn finetune acc std: ' + str(np.std(sgd_unlearn_finetune_acc)))
-                    np.save('./result/SGD/'+str(self.args.dataset)+'/sequential/sgd_acc_finetune_b'+str(batch_size)+'_step'+str(sgd_step)+'.npy', sgd_unlearn_finetune_acc)
+                    np.save('./result/SGD/'+str(self.args.dataset)+'/sequential/sgd_acc_finetune_b'+str(batch_size)+'_step'+str(sgd_step+1)+'.npy', sgd_unlearn_finetune_acc)
             import pdb; pdb.set_trace()
 
         elif self.args.paint_unlearning_sigma:
@@ -223,13 +224,14 @@ class Runner():
                     accuracy_scratch_Dnew, mean_time, unlearn_w_list = self.get_mean_performance(total_remove_x, total_remove_y, burn_in, sigma, None,
                                                                                                 self.projection, batch_size, self.batch_idx, return_w=True)
                     np.save('./result/SGD/'+str(self.args.dataset)+'/paint_unlearning_sigma/sgd_acc_unlearn_scratch_b'+str(batch_size)+'_sigma'+str(sigma)+'.npy', accuracy_scratch_Dnew)
-                    for sgd_step, sgd_k in enumerate(self.k_list):
-                        X_train_removed, y_train_removed = self.get_removed_data(int(sgd_step))
+                    for sgd_step in range(len(self.k_list)-1):
+                        sgd_k = self.k_list[sgd_step+1]
+                        X_train_removed, y_train_removed = self.get_removed_data(int(sgd_step+1))
                         sgd_unlearn_finetune_acc, mean_time, sgd_w_list = self.get_mean_performance(X_train_removed, y_train_removed, sgd_k, sigma, sgd_w_list, 
                                                                                                     self.projection, batch_size, self.batch_idx, len_list = 1, return_w = True)
                         print('SGD unlearn finetune acc: ' + str(np.mean(sgd_unlearn_finetune_acc)))
                         print('SGD unlearn finetune acc std: ' + str(np.std(sgd_unlearn_finetune_acc)))
-                        np.save('./result/SGD/'+str(self.args.dataset)+'/paint_unlearning_sigma/sgd_acc_finetune_b'+str(batch_size)+'_sigma'+str(sigma)+'_step'+str(sgd_step)+'.npy', sgd_unlearn_finetune_acc)
+                        np.save('./result/SGD/'+str(self.args.dataset)+'/paint_unlearning_sigma/sgd_acc_finetune_b'+str(batch_size)+'_sigma'+str(sigma)+'_step'+str(sgd_step+1)+'.npy', sgd_unlearn_finetune_acc)
                     
         elif self.args.paint_utility_epsilon:
             epsilon_list = [0.1, 0.5, 1, 2, 5]
