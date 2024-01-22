@@ -70,7 +70,7 @@ class Runner():
         print('M lipschitz constant:'+str(self.M))
         # calculate step size
         #max_eta = min( 1 / self.m, 2 / self.L) 
-        self.eta = 2 / self.L
+        self.eta = 1 / self.L
         print('step size eta:'+str(self.eta))
         # calculate RDP delta
         self.delta = 1 / self.n
@@ -94,17 +94,17 @@ class Runner():
         if self.args.search_burnin:
             # this is for full-batch
             if self.args.dataset == 'MNIST':
-                sigma_list = [0.001, 0.03]
+                sigma_list = [0.03]
                 burn_in_list = [1, 10, 20, 50, 100, 150, 200, 300, 500, 750, 1000]
             elif self.args.dataset == 'MNIST_multiclass':
                 sigma_list = [0.005, 0.01]
                 burn_in_list = [1, 10, 20, 50, 100, 150, 200]
             elif self.args.dataset == 'CIFAR10':
-                sigma_list = [0.001, 0.03]
+                sigma_list = [0.03]
                 burn_in_list = [1, 10, 20, 50, 100, 150, 200, 300, 500, 750, 1000]
             _ = self.search_burnin(sigma_list, burn_in_list)
         elif self.args.search_batch:
-            batch_list = [128, 256, 512]
+            batch_list = [512]
             burn_in_list = [1, 2, 5, 10, 20, 50, 100, 200, 300, 500]
             _ = self.search_batch(burn_in_list, batch_list)
         elif self.args.compare_baseline:
@@ -151,9 +151,8 @@ class Runner():
             target_epsilon = 1
             create_nested_folder('./result/SGD/'+str(self.args.dataset)+'/sequential/')
             sigma = 0.03
-            batch_list = [32, 128, 0]
-            burn_in_list = [100, 100, 1000]
-            
+            batch_list = [128, 256, 512, 0]
+            burn_in_list = [100, 150, 200, 1000]
             for batch_size, burn_in in zip(batch_list, burn_in_list):
                 print('working on batch size '+str(batch_size))
                 self.k_list = np.zeros(num_step+1).astype(int)
@@ -195,8 +194,8 @@ class Runner():
             num_step = num_remove_list[0]
             target_epsilon = 1
             sigma_list = [0.05, 0.1, 0.2, 0.5, 1]
-            batch_list = [32, 128, 0]
-            burn_in_list = [100, 100, 1000]
+            batch_list = [128, 256, 512, 0]
+            burn_in_list = [100, 150, 200, 1000]
             create_nested_folder('./result/SGD/'+str(self.args.dataset)+'/paint_unlearning_sigma/')
             for batch_size, burn_in in zip(batch_list, burn_in_list):
                 print('working on batch size '+str(batch_size))
@@ -500,7 +499,7 @@ def main():
     parser.add_argument('--batch_size', type = int, default = 0, help = 'the batch size')
 
     parser.add_argument('--gpu', type = int, default = 6, help = 'gpu')
-    parser.add_argument('--sigma', type = float, default = 0.01, help = 'the parameter sigma')
+    parser.add_argument('--sigma', type = float, default = 0.03, help = 'the parameter sigma')
     parser.add_argument('--burn_in', type = int, default = 1000, help = 'burn in step number of LMC')
 
     parser.add_argument('--search_burnin', type = int, default = 0, help = 'whether grid search to paint for burn-in')
