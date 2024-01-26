@@ -373,7 +373,7 @@ class Runner():
     
     def epsilon_alpha_loose_nonconvergent(self, sigma, alpha, q, K, T, b, R):
         p = 1/(1 - 1/q)
-        if b == 0:
+        if b == 128:
             if T > 30:
                 T = 30
         elif b == self.n:
