@@ -145,14 +145,54 @@ class Runner():
                     print('SGD unlearn finetune acc: ' + str(np.mean(sgd_unlearn_finetune_acc)))
                     print('SGD unlearn finetune acc std: ' + str(np.std(sgd_unlearn_finetune_acc)))
                     np.save('./result/SGD/'+str(self.args.dataset)+'/baseline/'+str(target_k)+'/sgd_acc_unlearn_finetune_b'+str(batch_size)+'_eps'+str(epsilon)+'.npy', sgd_unlearn_finetune_acc)
+        elif self.args.compare_baseline_nonconvergent:
+            # compare with the baseline nonconvergent (remove 1 data see sigma and utility)
+            epsilon_list = [0.05, 0.1, 0.5, 1, 2, 5]
+            batch_list = [128, 0]
+            burn_in_list = [100, 3000]
+            create_nested_folder('./result/SGD/'+str(self.args.dataset)+'/baseline_nonconvergent/')
+            X_train_removed, y_train_removed = self.get_removed_data(1)
+            target_k_list = [1]
+            for batch_size, burn_in in zip(batch_list, burn_in_list):
+                print('working on batch:'+str(batch_size))
+                # for each type of batch size
+                for target_k in target_k_list:
+                    # for each target k
+                    sigma_list = []
+                    for target_epsilon in epsilon_list:
+                        sigma_list.append(self.search_alpha_nonconvergent(target_k, target_epsilon, batch_size, burn_in, self.projection, 100))
+                    print('batch: '+str(batch_size)+'target k:'+str(target_k) + ' sigma: '+str(sigma_list))
+                # if it's none, then just take this value
+                sigma_list = [x if x is not None else 7.450581596923812e-9 for x in sigma_list]
+                # know the required k, and epsilon, sigma
+                for epsilon, sigma in zip(epsilon_list, sigma_list):
+                    print('working on epsilon:'+str(epsilon))
+                    create_nested_folder('./result/SGD/'+str(self.args.dataset)+'/baseline_nonconvergent/'+str(target_k)+'/')
+                    sgd_learn_scratch_acc, mean_time, sgd_w_list = self.get_mean_performance(self.X_train, self.y_train, burn_in, sigma, None,
+                                                                                                self.projection, batch_size, self.batch_idx, len_list = 1, return_w = True)
+                    print('SGD learn scratch acc: ' + str(np.mean(sgd_learn_scratch_acc)))
+                    print('SGD learn scratch acc std: ' + str(np.std(sgd_learn_scratch_acc)))
+                    np.save('./result/SGD/'+str(self.args.dataset)+'/baseline_nonconvergent/'+str(target_k)+'/sgd_acc_learn_scratch_b'+str(batch_size)+'_eps'+str(epsilon)+'.npy', sgd_learn_scratch_acc)
+                    sgd_unlearn_scratch_acc, mean_time = self.get_mean_performance(X_train_removed, y_train_removed, burn_in, sigma, None, 
+                                                                                    self.projection, batch_size, self.batch_idx, len_list = 1)
+                    print('SGD unlearn scratch acc: ' + str(np.mean(sgd_unlearn_scratch_acc)))
+                    print('SGD unlearn scratch acc std: ' + str(np.std(sgd_unlearn_scratch_acc)))
+                    np.save('./result/SGD/'+str(self.args.dataset)+'/baseline_nonconvergent/'+str(target_k)+'/sgd_acc_unlearn_scratch_b'+str(batch_size)+'_eps'+str(epsilon)+'.npy', sgd_unlearn_scratch_acc)
+                    sgd_unlearn_finetune_acc, mean_time = self.get_mean_performance(X_train_removed, y_train_removed, target_k_list[0], sigma, sgd_w_list,
+                                                                                    self.projection, batch_size, self.batch_idx, len_list = 1)
+                    print('SGD unlearn finetune acc: ' + str(np.mean(sgd_unlearn_finetune_acc)))
+                    print('SGD unlearn finetune acc std: ' + str(np.std(sgd_unlearn_finetune_acc)))
+                    np.save('./result/SGD/'+str(self.args.dataset)+'/baseline_nonconvergent/'+str(target_k)+'/sgd_acc_unlearn_finetune_b'+str(batch_size)+'_eps'+str(epsilon)+'.npy', sgd_unlearn_finetune_acc)
         elif self.args.sequential:
             num_remove_list = [100]
             num_step = num_remove_list[0]
             target_epsilon = 1
             create_nested_folder('./result/SGD/'+str(self.args.dataset)+'/sequential/')
             sigma = 0.03
-            batch_list = [128, 256, 512, 0]
-            burn_in_list = [100, 150, 200, 1000]
+            #batch_list = [128, 256, 512, 0]
+            #burn_in_list = [100, 150, 200, 1000]
+            batch_list = [32, 64]
+            burn_in_list = [50, 75]
             for batch_size, burn_in in zip(batch_list, burn_in_list):
                 print('working on batch size '+str(batch_size))
                 self.k_list = np.zeros(num_step+1).astype(int)
@@ -193,9 +233,12 @@ class Runner():
             num_remove_list = [100]
             num_step = num_remove_list[0]
             target_epsilon = 1
-            sigma_list = [0.05, 0.1, 0.2, 0.5, 1]
-            batch_list = [128, 256, 512, 0]
-            burn_in_list = [100, 150, 200, 1000]
+            #sigma_list = [0.05, 0.1, 0.2, 0.5, 1]
+            sigma_list = [0.01]
+            batch_list = [32, 128, 512, 0]
+            #burn_in_list = [100, 150, 200, 1000]
+            batch_list = [32, 64]
+            burn_in_list = [50, 75]
             create_nested_folder('./result/SGD/'+str(self.args.dataset)+'/paint_unlearning_sigma/')
             for batch_size, burn_in in zip(batch_list, burn_in_list):
                 print('working on batch size '+str(batch_size))
@@ -291,7 +334,8 @@ class Runner():
         X_train_removed = torch.cat((X_train_removed, new_X_train), 0)
         y_train_removed = torch.cat((y_train_removed, new_y_train))
         return X_train_removed, y_train_removed
-    
+
+
     def epsilon_with_alpha_z(self, sigma, alpha, K, b, z):
         if b == 0:
             b = self.n
@@ -312,6 +356,31 @@ class Runner():
             b = self.n
         c = 1-self.eta*self.m
         return alpha * self.Z_B_loose(b)**2 / (2 * self.eta * sigma**2) * (c**2 - 1) / (1 - c**(-2 * K * self.n / b))
+    
+    def epsilon1_alpha_loose_nonconvergent(self, sigma, alpha, T, b, R):
+        if b == 0:
+            b = self.n
+        c = 1-self.eta*self.m
+        return alpha * (2*R)**2 / (2 * self.eta * sigma**2) * (c**2 - 1) / (1 - c**(-2 * T * self.n / b))
+    
+    def epsilon2_alpha_loose_nonconvergent(self, sigma, alpha, K, T, b, R):
+        if b == 0:
+            b = self.n
+        c = 1-self.eta*self.m
+        part1 = alpha * self.Z_B_loose(b)**2 / (2 * self.eta * sigma**2) * (c**2 - 1) / (1 - c**(-2 * K * self.n / b))
+        part2 = 2*R*c**(2 * T * self.n / b)
+        return part1 + part2
+    
+    def epsilon_alpha_loose_nonconvergent(self, sigma, alpha, q, K, T, b, R):
+        p = 1/(1 - 1/q)
+        if b == 0:
+            if T > 30:
+                T = 30
+        elif b == self.n:
+            T = 3000
+        part1 = self.epsilon1_alpha_loose_nonconvergent(sigma, q*(alpha-1/p), T, b, R)
+        part2 = self.epsilon2_alpha_loose_nonconvergent(sigma, p*alpha, K, T, b, R)
+        return part1 + part2 * (alpha - 1/p) / (alpha - 1)
     
     def Z_B_loose(self, b):
         if b == 0:
@@ -349,7 +418,34 @@ class Runner():
             else:
                 lower = mid
         return upper
-
+    
+    def compute_k_loose_nonconvergent(self, sigma, target_epsilon, T, q, b, R):
+        
+        k = 1
+        epsilon = lambda alpha: (self.epsilon_alpha_loose_nonconvergent(sigma, alpha, q, k, T, b, R)+ np.log(self.n)/(alpha-1))
+        min_epsilon = minimize_scalar(epsilon, bounds=(1, 10000), method='bounded')
+        while min_epsilon.fun > target_epsilon:
+            k = k + 1
+            epsilon = lambda alpha: (self.epsilon_alpha_loose_nonconvergent(sigma, alpha, q, k, T, b, R)+ np.log(self.n)/(alpha-1))
+            min_epsilon = minimize_scalar(epsilon, bounds=(1, 10000), method='bounded')
+        return k, min_epsilon.x
+    
+    def search_alpha_nonconvergent(self, target_k, epsilon, batch_size, T, R, q = 100, lower = 1e-15, upper = 10.0):
+        if batch_size == 0:
+            batch_size = self.n
+        
+        if self.compute_k_loose_nonconvergent(lower, epsilon, T, q, batch_size, R)[0] < target_k or self.compute_k_loose_nonconvergent(upper, epsilon, T, q, batch_size, R)[0] > target_k:
+            print('not good upper lowers')
+            return
+        while upper - lower > 1e-8:
+            mid = (lower + upper) / 2
+            k, _ = self.compute_k_loose_nonconvergent(mid, epsilon, T, q, batch_size, R)
+            if k <= target_k:
+                upper = mid
+            else:
+                lower = mid
+        return upper
+    
     def search_finetune_step(self, sigma, epsilon_list, batch_list):
         K_dict = {}
         alpha_dict = {}
@@ -495,7 +591,7 @@ def main():
     parser.add_argument('--num-steps', type=int, default=10000, help='number of optimization steps')
     parser.add_argument('--train-mode', type=str, default='binary', help='train mode [ovr/binary]')
     parser.add_argument('--M', type = float, default = 1, help = 'set M-Lipschitz constant (norm of gradient)')
-    parser.add_argument('--projection', type = float, default = 20.0, help = 'set the weight projection radius')
+    parser.add_argument('--projection', type = float, default = 100.0, help = 'set the weight projection radius')
     parser.add_argument('--batch_size', type = int, default = 0, help = 'the batch size')
 
     parser.add_argument('--gpu', type = int, default = 6, help = 'gpu')
@@ -509,6 +605,7 @@ def main():
     parser.add_argument('--paint_unlearning_sigma', type = int, default = 0, help = 'paint unlearning utility - sigma figure')
     parser.add_argument('--how_much_retrain', type = int, default = 0, help = 'supplementary for unlearning sigma')
     parser.add_argument('--compare_baseline', type = int, default = 0, help = 'compare with baseline')
+    parser.add_argument('--compare_baseline_nonconvergent', type = int, default = 0, help = 'compare with the baselines with nonconvergent calculation')
     parser.add_argument('--sequential', type = int, default = 0, help = 'sequential unlearni')
     args = parser.parse_args()
     print(args)

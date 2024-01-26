@@ -94,9 +94,9 @@ def stochastic_gradient_descent_algorithm(init_point, dim_w, X, y, lam, sigma, d
                 grad = clipped_grad.mean(0)
                 wi = wi.detach() - step * grad + np.sqrt(2 * step * sigma**2) * torch.randn(dim_w, num_class).to(device)
                 if projection != 0:
-                        w_norm = torch.norm(wi, p=2)
-                        if w_norm > projection:
-                            wi = (wi / w_norm) * projection
+                    w_norm = torch.norm(wi, p=2)
+                    if w_norm > projection:
+                        wi = (wi / w_norm) * projection
                 samples.append(wi.detach().cpu().numpy())
             return samples[burn_in:]
         else:
