@@ -162,8 +162,6 @@ class Runner():
                     for target_epsilon in epsilon_list:
                         sigma_list.append(self.search_alpha_nonconvergent(target_k, target_epsilon, batch_size, burn_in, self.projection, 100))
                     print('batch: '+str(batch_size)+'target k:'+str(target_k) + ' sigma: '+str(sigma_list))
-                # if it's none, then just take this value
-                sigma_list = [x if x is not None else 7.450581596923812e-9 for x in sigma_list]
                 # know the required k, and epsilon, sigma
                 for epsilon, sigma in zip(epsilon_list, sigma_list):
                     print('working on epsilon:'+str(epsilon))
@@ -386,11 +384,11 @@ class Runner():
         if b == 0:
             b = self.n
         c = 1-self.eta*self.m
-        return 1/(1-c) * 2 * self.eta * self.M /b
+        return 1/(1-c**(self.n/b)) * 2 * self.eta * self.M /b
 
     def Z_B(self,j,b):
         c = 1-self.eta*self.m
-        return 1/(1-c) * c**(self.n/b-j-1) * 2 * self.eta * self.M /b
+        return 1/(1-c**(self.n/b)) * c**(self.n/b-j-1) * 2 * self.eta * self.M /b
     
     def compute_k_loose(self, sigma, target_epsilon, b):
         k = 1
@@ -599,26 +597,4 @@ def main():
     parser.add_argument('--burn_in', type = int, default = 1000, help = 'burn in step number of LMC')
 
     parser.add_argument('--search_burnin', type = int, default = 0, help = 'whether grid search to paint for burn-in')
-    parser.add_argument('--search_batch', type = int, default = 0, help = 'paint the batch size utility relation')
-    parser.add_argument('--paint_utility_s', type = int, default = 0, help = 'paint the utility - s figure')
-    parser.add_argument('--paint_utility_epsilon', type = int, default = 0, help = 'paint utility - epsilon figure')
-    parser.add_argument('--paint_unlearning_sigma', type = int, default = 0, help = 'paint unlearning utility - sigma figure')
-    parser.add_argument('--how_much_retrain', type = int, default = 0, help = 'supplementary for unlearning sigma')
-    parser.add_argument('--compare_baseline', type = int, default = 0, help = 'compare with baseline')
-    parser.add_argument('--compare_baseline_nonconvergent', type = int, default = 0, help = 'compare with the baselines with nonconvergent calculation')
-    parser.add_argument('--sequential', type = int, default = 0, help = 'sequential unlearni')
-    args = parser.parse_args()
-    print(args)
-
-    runner = Runner(args)
-    runner.get_metadata()
-
-    #import pdb; pdb.set_trace()
-
-    runner.train()
-
-
-
-
-if __name__ == '__main__':
-    main()
+    parser.add_argument('--search_batch', type = int, default = 0, help = 'paint the batch size u
