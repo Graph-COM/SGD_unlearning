@@ -596,7 +596,9 @@ def main():
     parser.add_argument('--burn_in', type = int, default = 1000, help = 'burn in step number of LMC')
 
     parser.add_argument('--search_burnin', type = int, default = 0, help = 'whether grid search to paint for burn-in')
-    parser.add_argument('--search_batch', type = int, default = 0, help = 'paint the batch size utility - sigma figure')
+    parser.add_argument('--search_batch', type = int, default = 0, help = 'paint the batch size utility - s figure')
+    parser.add_argument('--paint_utility_epsilon', type = int, default = 0, help = 'paint utility - epsilon figure')
+    parser.add_argument('--paint_unlearning_sigma', type = int, default = 0, help = 'paint unlearning utility - sigma figure')
     parser.add_argument('--how_much_retrain', type = int, default = 0, help = 'supplementary for unlearning sigma')
     parser.add_argument('--compare_baseline', type = int, default = 0, help = 'compare with baseline')
     parser.add_argument('--compare_baseline_nonconvergent', type = int, default = 0, help = 'compare with the baselines with nonconvergent calculation')
