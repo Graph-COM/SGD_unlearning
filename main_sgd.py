@@ -104,7 +104,7 @@ class Runner():
                 burn_in_list = [1, 10, 20, 50, 100, 150, 200, 300, 500, 750, 1000]
             _ = self.search_burnin(sigma_list, burn_in_list)
         elif self.args.search_batch:
-            batch_list = [512]
+            batch_list = [32, 128, 512]
             burn_in_list = [1, 2, 5, 10, 20, 50, 100, 200, 300, 500]
             _ = self.search_batch(burn_in_list, batch_list)
         elif self.args.compare_baseline:
@@ -365,7 +365,7 @@ class Runner():
             b = self.n
         c = 1-self.eta*self.m
         part1 = alpha * self.Z_B_loose(b)**2 / (2 * self.eta * sigma**2) * (c**2 - 1) / (1 - c**(-2 * K * self.n / b))
-        part2 = 2*R*c**(2 * T * self.n / b)
+        part2 = 2*R*c**(T * self.n / b)
         return part1 + part2
     
     def epsilon_alpha_loose_nonconvergent(self, sigma, alpha, q, K, T, b, R):
@@ -377,7 +377,7 @@ class Runner():
             T = 3000
         part1 = self.epsilon1_alpha_loose_nonconvergent(sigma, q*(alpha-1/p), T, b, R)
         part2 = self.epsilon2_alpha_loose_nonconvergent(sigma, p*alpha, K, T, b, R)
-        return part1 + part2 * (alpha - 1/p) / (alpha - 1)
+        return (part1 + part2) * (alpha - 1/p) / (alpha - 1)
     
     def Z_B_loose(self, b):
         if b == 0:
@@ -547,12 +547,12 @@ class Runner():
             acc_dict[batch] = acc_list
             for i in range(len(burn_in_list)):
                 plt.text(burn_in_list[i], acc_list[i], f'{acc_list[i]:.3f}', ha='right', va='bottom')
-        plt.legend()
-        plt.title(str(self.args.dataset)+'search burn in')
-        plt.xlabel('burn in steps')
-        plt.ylabel('accuracy')
-        plt.savefig(str(self.args.dataset)+fig_path)
-        plt.clf()
+            plt.legend()
+            plt.title(str(self.args.dataset)+' search burning in steps')
+            plt.xlabel('burn in steps')
+            plt.ylabel('accuracy')
+            plt.savefig(str(self.args.dataset)+str(batch)+fig_path)
+            plt.clf()
         return acc_dict
                 
     def test_accuracy(self, w_list):
