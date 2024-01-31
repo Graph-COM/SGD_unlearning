@@ -104,8 +104,8 @@ class Runner():
                 burn_in_list = [1, 10, 20, 50, 100, 150, 200, 300, 500, 750, 1000]
             _ = self.search_burnin(sigma_list, burn_in_list)
         elif self.args.search_batch:
-            batch_list = [32, 128, 512]
-            burn_in_list = [1, 2, 5, 10, 20, 50, 100, 200, 300, 500]
+            batch_list = [1, 32, 128, 512]
+            burn_in_list = [1, 2, 3, 4, 5]
             _ = self.search_batch(burn_in_list, batch_list)
         elif self.args.compare_baseline:
             # compare with the baseline (remove 1 data see sigma and utility)
@@ -160,7 +160,7 @@ class Runner():
                     # for each target k
                     sigma_list = []
                     for target_epsilon in epsilon_list:
-                        sigma_list.append(self.search_alpha_nonconvergent(target_k, target_epsilon, batch_size, burn_in, self.projection, 100))
+                        sigma_list.append(self.search_alpha_nonconvergent(target_k, target_epsilon, batch_size, burn_in, self.projection, 2))
                     print('batch: '+str(batch_size)+'target k:'+str(target_k) + ' sigma: '+str(sigma_list))
                 # know the required k, and epsilon, sigma
                 for epsilon, sigma in zip(epsilon_list, sigma_list):
@@ -203,11 +203,11 @@ class Runner():
                     self.k_list[step] = 1
                     self.ZB_list[step] = self.Z_B_sequential(step, batch_size, self.ZB_list[step - 1])
                     epsilon_of_step = lambda alpha: self.epsilon_with_alpha_z(sigma, alpha, self.k_list[step], batch_size, self.ZB_list[step]) + (math.log(1 / float(self.delta))) / (alpha - 1)
-                    min_epsilon_step = minimize_scalar(epsilon_of_step, bounds=(1, 100000), method='bounded')
+                    min_epsilon_step = minimize_scalar(epsilon_of_step, bounds=(2, 100000), method='bounded')
                     while min_epsilon_step.fun > target_epsilon:
                         self.k_list[step] = self.k_list[step] + 1
                         epsilon_of_step = lambda alpha: self.epsilon_with_alpha_z(sigma, alpha, self.k_list[step], batch_size, self.ZB_list[step]) + (math.log(1 / float(self.delta))) / (alpha - 1)
-                        min_epsilon_step = minimize_scalar(epsilon_of_step, bounds=(1, 100000), method='bounded')
+                        min_epsilon_step = minimize_scalar(epsilon_of_step, bounds=(2, 100000), method='bounded')
                 print('batch size: '+str(batch_size)+' k list: '+str(self.k_list)+' zb list: '+str(self.ZB_list))
                 np.save('./result/SGD/'+str(self.args.dataset)+'/sequential/'+'k_list_b'+str(batch_size)+'.npy', self.k_list)
 
@@ -230,11 +230,9 @@ class Runner():
         elif self.args.paint_unlearning_sigma:
             num_remove_list = [100]
             num_step = num_remove_list[0]
-            target_epsilon = 1
-            #sigma_list = [0.05, 0.1, 0.2, 0.5, 1]
-            sigma_list = [0.01]
+            target_epsilon = 0.01
+            sigma_list = [0.01, 0.05, 0.1, 0.2, 0.5, 1]
             batch_list = [32, 128, 512, 0]
-            #burn_in_list = [100, 150, 200, 1000]
             burn_in_list = [50, 100, 200, 1000]
             create_nested_folder('./result/SGD/'+str(self.args.dataset)+'/paint_unlearning_sigma/')
             for batch_size, burn_in in zip(batch_list, burn_in_list):
@@ -250,11 +248,11 @@ class Runner():
                         self.k_list[step] = 1
                         self.ZB_list[step] = self.Z_B_sequential(step, batch_size, self.ZB_list[step - 1])
                         epsilon_of_step = lambda alpha: self.epsilon_with_alpha_z(sigma, alpha, self.k_list[step], batch_size, self.ZB_list[step]) + (math.log(1 / float(self.delta))) / (alpha - 1)
-                        min_epsilon_step = minimize_scalar(epsilon_of_step, bounds=(1, 100000), method='bounded')
+                        min_epsilon_step = minimize_scalar(epsilon_of_step, bounds=(2, 100000), method='bounded')
                         while min_epsilon_step.fun > target_epsilon:
                             self.k_list[step] = self.k_list[step] + 1
                             epsilon_of_step = lambda alpha: self.epsilon_with_alpha_z(sigma, alpha, self.k_list[step], batch_size, self.ZB_list[step]) + (math.log(1 / float(self.delta))) / (alpha - 1)
-                            min_epsilon_step = minimize_scalar(epsilon_of_step, bounds=(1, 100000), method='bounded')
+                            min_epsilon_step = minimize_scalar(epsilon_of_step, bounds=(2, 100000), method='bounded')
                     print('batch size: '+str(batch_size)+'sigma: '+str(sigma)+' k list: '+str(self.k_list)+' zb list: '+str(self.ZB_list))
                     np.save('./result/SGD/'+str(self.args.dataset)+'/paint_unlearning_sigma/'+'k_list_b'+str(batch_size)+'_sigma'+str(sigma)+'.npy', self.k_list)
                     # see the utility
@@ -283,14 +281,13 @@ class Runner():
             num_remove_list = [1, 50, 100]
             create_nested_folder('./result/SGD/'+str(self.args.dataset)+'/paint_utility_epsilon/')
             for batch_size in batch_size_list:
-                '''accuracy_scratch_D, mean_time, w_list = self.get_mean_performance(self.X_train, self.y_train, self.args.burn_in, self.args.sigma, 
+                accuracy_scratch_D, mean_time, w_list = self.get_mean_performance(self.X_train, self.y_train, self.args.burn_in, self.args.sigma, 
                                                                               None, self.args.projection, batch_size, self.batch_idx, 
                                                                               len_list = 1, return_w = True, )
                 np.save('./result/LMC/'+str(self.args.dataset)+'/paint_utility_epsilon/w_from_scratch_b'+str(batch_size)+'.npy', w_list)
-                np.save('./result/LMC/'+str(self.args.dataset)+'/paint_utility_epsilon/acc_scratch_D_b'+str(batch_size)+'.npy', accuracy_scratch_D)'''
+                np.save('./result/LMC/'+str(self.args.dataset)+'/paint_utility_epsilon/acc_scratch_D_b'+str(batch_size)+'.npy', accuracy_scratch_D)
                 # calculate K
                 K_dict, _ = self.search_finetune_step(self.args.sigma, epsilon_list, batch_size_list)
-                import pdb; pdb.set_trace()
                 np.save('./result/LMC/'+str(self.args.dataset)+'/paint_utility_epsilon/K_list.npy', K_dict)
                 for remove_idx, num_remove in enumerate(num_remove_list):
                     K_list = []
@@ -352,21 +349,22 @@ class Runner():
         if b == 0:
             b = self.n
         c = 1-self.eta*self.m
-        return alpha * self.Z_B_loose(b)**2 / (2 * self.eta * sigma**2) * (c**2 - 1) / (1 - c**(-2 * K * self.n / b))
+        return alpha * self.Z_B_loose(b)**2 / (2 * self.eta * sigma**2) * c**(2 * K * self.n / b)
     
     def epsilon1_alpha_loose_nonconvergent(self, sigma, alpha, T, b, R):
         if b == 0:
             b = self.n
         c = 1-self.eta*self.m
-        return alpha * (2*R)**2 / (2 * self.eta * sigma**2) * (c**2 - 1) / (1 - c**(-2 * T * self.n / b))
+        return alpha * (2*R)**2 / (2 * self.eta * sigma**2) * c**(2 * T * self.n / b)
     
     def epsilon2_alpha_loose_nonconvergent(self, sigma, alpha, K, T, b, R):
         if b == 0:
             b = self.n
         c = 1-self.eta*self.m
-        part1 = alpha * self.Z_B_loose(b)**2 / (2 * self.eta * sigma**2) * (c**2 - 1) / (1 - c**(-2 * K * self.n / b))
+        part1 = self.Z_B_loose(b)
         part2 = 2*R*c**(T * self.n / b)
-        return part1 + part2
+        ans = alpha * (part1+part2)**2 / (2 * self.eta * sigma**2) * c**(2 * K * self.n / b)
+        return ans
     
     def epsilon_alpha_loose_nonconvergent(self, sigma, alpha, q, K, T, b, R):
         p = 1/(1 - 1/q)
@@ -375,7 +373,7 @@ class Runner():
                 T = 30
         elif b == self.n:
             T = 3000
-        part1 = self.epsilon1_alpha_loose_nonconvergent(sigma, q*(alpha-1/p), T, b, R)
+        part1 = self.epsilon1_alpha_loose_nonconvergent(sigma, q*(alpha), T, b, R)
         part2 = self.epsilon2_alpha_loose_nonconvergent(sigma, p*alpha, K, T, b, R)
         return (part1 + part2) * (alpha - 1/p) / (alpha - 1)
     
@@ -392,11 +390,11 @@ class Runner():
     def compute_k_loose(self, sigma, target_epsilon, b):
         k = 1
         epsilon = lambda alpha: (self.epsilon_alpha_loose(sigma, alpha,k, b)+ np.log(self.n)/(alpha-1))
-        min_epsilon = minimize_scalar(epsilon, bounds=(1, 100000), method='bounded')
+        min_epsilon = minimize_scalar(epsilon, bounds=(2, 100000), method='bounded')
         while min_epsilon.fun > target_epsilon:
             k = k + 1
             epsilon = lambda alpha: (self.epsilon_alpha_loose(sigma, alpha,k, b)+ np.log(self.n)/(alpha-1))
-            min_epsilon = minimize_scalar(epsilon, bounds=(1, 100000), method='bounded')
+            min_epsilon = minimize_scalar(epsilon, bounds=(2, 100000), method='bounded')
         
         #print(f'batch = {b}, epsilon={min_epsilon.fun}, alpha={min_epsilon.x}, loose K={k}')
         return k, min_epsilon.x
@@ -420,14 +418,14 @@ class Runner():
         
         k = 1
         epsilon = lambda alpha: (self.epsilon_alpha_loose_nonconvergent(sigma, alpha, q, k, T, b, R)+ np.log(self.n)/(alpha-1))
-        min_epsilon = minimize_scalar(epsilon, bounds=(1, 10000), method='bounded')
+        min_epsilon = minimize_scalar(epsilon, bounds=(2, 10000), method='bounded')
         while min_epsilon.fun > target_epsilon:
             k = k + 1
             epsilon = lambda alpha: (self.epsilon_alpha_loose_nonconvergent(sigma, alpha, q, k, T, b, R)+ np.log(self.n)/(alpha-1))
-            min_epsilon = minimize_scalar(epsilon, bounds=(1, 10000), method='bounded')
+            min_epsilon = minimize_scalar(epsilon, bounds=(2, 10000), method='bounded')
         return k, min_epsilon.x
     
-    def search_alpha_nonconvergent(self, target_k, epsilon, batch_size, T, R, q = 100, lower = 1e-15, upper = 10.0):
+    def search_alpha_nonconvergent(self, target_k, epsilon, batch_size, T, R, q = 2, lower = 1e-15, upper = 10.0):
         if batch_size == 0:
             batch_size = self.n
         

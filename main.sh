@@ -10,8 +10,8 @@ nohup python -u main_sgd.py --lam 1e-6 --sigma 0.03 --dataset MNIST --projection
 nohup python -u main_sgd.py --lam 1e-6 --sigma 0.03 --dataset CIFAR10 --projection 0 --search_batch 1 --gpu 1 >./CIFAR10_LMC_search_batch_lam1e6.log 2>&1 </dev/null &
 
 # compare with LMC and D2D baseline nonconvergent
-#nohup python -u main_sgd.py --lam 1e-6 --dataset MNIST --projection 0 --compare_baseline_nonconvergent 1 --gpu 0 >./MNIST_SGD_compare_baseline_nonconvergent.log 2>&1 </dev/null &
-#nohup python -u main_sgd.py --lam 1e-6 --dataset CIFAR10 --projection 0 --compare_baseline_nonconvergent 1 --gpu 2 >./CIFAR10_SGD_compare_baseline_nonconvergent.log 2>&1 </dev/null &
+#nohup python -u main_sgd.py --lam 1e-6 --dataset MNIST --projection 0 --compare_baseline_nonconvergent 1 --gpu 6 >./MNIST_SGD_compare_baseline_nonconvergent.log 2>&1 </dev/null &
+#nohup python -u main_sgd.py --lam 1e-6 --dataset CIFAR10 --projection 0 --compare_baseline_nonconvergent 1 --gpu 7 >./CIFAR10_SGD_compare_baseline_nonconvergent.log 2>&1 </dev/null &
 
 # compare with LMC and D2D baseline
 #nohup python -u main_sgd.py --lam 1e-6 --dataset MNIST --projection 0 --compare_baseline 1 --gpu 4 >./MNIST_SGD_compare_baseline.log 2>&1 </dev/null &
