@@ -8,8 +8,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 
-
-# below is the slow version of per sample gradient
 def stochastic_gradient_descent_algorithm(init_point, dim_w, X, y, lam, sigma, device, burn_in = 10000,
                                            len_list = 1, step=0.1, M = 1, m = 0, projection = 0, batch_size = 0, batch_idx = None,
                                            num_class = 0):
