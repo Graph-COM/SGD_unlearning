@@ -335,22 +335,6 @@ class Runner():
                 lower = mid
         return upper
     
-    def search_finetune_step(self, sigma, epsilon_list, batch_list):
-        K_dict = {}
-        alpha_dict = {}
-        for batch_size in batch_list:
-            if batch_size == 0:
-                batch_size = self.n
-            K_list = {}
-            alpha_list = {}
-            for target_epsilon in epsilon_list:
-                K, alpha = self.compute_k_loose(sigma, target_epsilon, batch_size)
-                K_list[target_epsilon] = K
-                alpha_list[target_epsilon] = alpha
-            K_dict[batch_size] = K_list
-            alpha_dict[batch_size] = alpha_list
-        return K_dict, alpha_dict
-    
 
     def get_mean_performance(self, X, y, step, sigma, w_list, projection, batch_size, batch_idx, len_list = 1, return_w = False, num_trial = 100):
         new_w_list = []
