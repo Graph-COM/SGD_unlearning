@@ -121,3 +121,61 @@ def stochastic_gradient_descent_algorithm(init_point, dim_w, X, y, lam, sigma, d
                             wi = (wi / w_norm) * projection
                 samples.append(wi.detach().cpu().numpy())
             return samples[burn_in:]
+        
+
+
+def stochastic_gradient_descent_algorithm_multiclass(init_point, dim_w, X, y, lam, sigma, device, burn_in = 10000,
+                                           len_list = 1, step=0.1, M = 1, m = 0, projection = 0, batch_size = 0, batch_idx = None,
+                                           num_class = 0):
+    if batch_idx is None or num_class == 0:
+        print('there is no valid batch idx assignment, please check!')
+        print('or there is no valid num class')
+        return
+    if init_point == None:
+        if m == 0:
+            print('m not assigned, please check!')
+        var = (2 * sigma**2) / m
+        std = torch.sqrt(torch.tensor(var))
+        w0 = torch.normal(mean=1000, std=std, size=(dim_w, num_class)).to(device)
+    else:
+        w0 = init_point.to(device)
+    wi = w0
+    samples = []
+    if batch_size == 0:
+        for i in range(len_list + burn_in):
+            pre_log_softmax = torch.matmul(X, wi)
+            pred_log = F.softmax(pre_log_softmax, dim = -1)
+            per_sample_grad=torch.bmm(X.unsqueeze(-1), (pred_log - y).unsqueeze(1))
+            row_norms = torch.norm(per_sample_grad,dim=(1, 2))
+            clipped_grad = (per_sample_grad / row_norms.unsqueeze(-1).unsqueeze(-1)) * M
+            clipped_grad[row_norms <= M] = per_sample_grad[row_norms <= M]
+            grad_1 = clipped_grad.mean(0)
+            grad_2 = lam * wi
+            wi = wi.detach() - step * (grad_1 + grad_2) + np.sqrt(2 * step * sigma**2) * torch.randn(dim_w, num_class).to(device)
+            if projection != 0:
+                w_norm = torch.norm(wi, p=2)
+                wi = (wi / w_norm) * projection
+            samples.append(wi.detach().cpu().numpy())
+        return samples[burn_in:]
+    else:
+        # batch stochastic sgd for langevin
+        # first sample a batch of y and X
+        num_batch = int(len(batch_idx) / batch_size)
+        for i in range(len_list + burn_in):
+            for step_idx in range(num_batch):
+                X_batch = X[batch_idx[step_idx*batch_size:(step_idx + 1)*batch_size]]
+                y_batch = y[batch_idx[step_idx*batch_size:(step_idx + 1)*batch_size]]
+                pre_log_softmax = torch.matmul(X_batch, wi)
+                pred_log = F.softmax(pre_log_softmax, dim = -1)
+                per_sample_grad=torch.bmm(X_batch.unsqueeze(-1), (pred_log - y_batch).unsqueeze(1))
+                row_norms = torch.norm(per_sample_grad,dim=(1, 2))
+                clipped_grad = (per_sample_grad / row_norms.unsqueeze(-1).unsqueeze(-1)) * M
+                clipped_grad[row_norms <= M] = per_sample_grad[row_norms <= M]
+                grad_1 = clipped_grad.mean(0)
+                grad_2 = lam * wi
+                wi = wi.detach() - step * (grad_1 + grad_2) + np.sqrt(2 * step * sigma**2) * torch.randn(dim_w, num_class).to(device)
+                if projection != 0:
+                    w_norm = torch.norm(wi, p=2)
+                    wi = (wi / w_norm) * projection
+            samples.append(wi.detach().cpu().numpy())
+        return samples[burn_in:]
