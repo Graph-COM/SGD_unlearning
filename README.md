@@ -51,7 +51,7 @@ If you find our work useful, please cite us:
 @article{chien2024stochastic,
   title={Stochastic Gradient Langevin Unlearning},
   author={Chien, Eli and Wang, Haoyu and Chen, Ziang and Li, Pan},
-  journal={Adcances in Neural Information Processing Systems (Neurips) 2024},
+  journal={arXiv preprint arXiv:2403.17105},
   year={2024}
 }
 ```
