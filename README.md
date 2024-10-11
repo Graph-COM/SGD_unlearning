@@ -2,7 +2,7 @@
 
 This is the official implementation of **Neurips 2024** paper 
 
-[Certified Machine Unlearning via Noisy Stochastic Gradient Descent]([https://arxiv.org/abs/2401.10371](https://arxiv.org/abs/2403.17105))
+[Certified Machine Unlearning via Noisy Stochastic Gradient Descent](https://arxiv.org/abs/2403.17105)
 
 By Eli Chien, Haoyu Wang, Ziang Chen and Pan Li.
 
