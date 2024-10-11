@@ -1,6 +1,6 @@
 # SGD_Unlearning
 
-This is the official implementation of the paper Stochastic Gradient Langevin Unlearning.
+This is the official implementation of **Neurips 2024** paper [Stochastic Gradient Langevin Unlearning](https://arxiv.org/abs/2403.17105).
 
 ## Environment requirements
 
@@ -42,3 +42,16 @@ python main_sgd.py --lam 1e-6 --dataset [MNIST/CIFAR10] --projection 0 --paint_u
 please refer to ./result/Plotplace.ipynb
 
 * Notes: *use --gpu to allocate to a GPU device*
+
+
+## Citation
+
+If you find our work useful, please cite us:
+```
+@article{chien2024stochastic,
+  title={Stochastic Gradient Langevin Unlearning},
+  author={Chien, Eli and Wang, Haoyu and Chen, Ziang and Li, Pan},
+  journal={Adcances in Neural Information Processing Systems (Neurips) 2024},
+  year={2024}
+}
+```
