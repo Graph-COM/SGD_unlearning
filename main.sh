@@ -12,3 +12,8 @@
 # paint unlearning unlearning - sigma figure
 #nohup python -u main_sgd.py --lam 1e-6 --dataset MNIST --projection 0 --paint_unlearning_sigma 1 --gpu 0 >./MNIST_SGD_paint_unlearning_sigma_001.log 2>&1 </dev/null &
 #nohup python -u main_sgd.py --lam 1e-6 --dataset CIFAR10 --projection 0 --paint_unlearning_sigma 1 --gpu 1 >./CIFAR10_SGD_paint_unlearning_sigma_001.log 2>&1 </dev/null &
+
+# retrain noiseless
+#nohup python -u main_sgd.py --lam 1e-6 --dataset MNIST --projection 0 --retrain_noiseless 1 --gpu 3 >./MNIST_SGD_retrain_noiseless.log 2>&1 </dev/null &
+#nohup python -u main_sgd.py --lam 1e-6 --dataset CIFAR10 --projection 0 --retrain_noiseless 1 --gpu 7 >./CIFAR10_SGD_retrain_noiseless.log 2>&1 </dev/null &
+#nohup python -u main_sgd_multiclass.py --lam 1e-6 --dataset CIFAR10_MULTI --projection 0 --retrain_noiseless 1 --gpu 2 >./CIFAR10_MULTI_SGD_retrain_noiseless.log 2>&1 </dev/null &

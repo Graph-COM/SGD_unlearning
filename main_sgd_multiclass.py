@@ -104,6 +104,13 @@ class Runner():
                     print('SGD unlearn finetune acc: ' + str(np.mean(sgd_unlearn_finetune_acc)))
                     print('SGD unlearn finetune acc std: ' + str(np.std(sgd_unlearn_finetune_acc)))
                     np.save('./result/SGD/'+str(self.args.dataset)+'/baseline_nonconvergent/'+str(target_k)+'/sgd_acc_unlearn_finetune_b'+str(batch_size)+'_eps'+str(epsilon)+'.npy', sgd_unlearn_finetune_acc)
+        elif self.args.retrain_noiseless == 1:
+            num_remove_list = [1, 10, 50, 100, 500, 1000] # the number of data to remove
+            for num_remove in num_remove_list:
+                create_nested_folder('./result/SGD/'+str(self.args.dataset)+'/retrain_noiseless/')
+                X_train_removed, y_train_removed = self.get_removed_data(num_remove)
+                accuracy_scratch_Dnew, mean_time = self.get_mean_performance(X_train_removed, y_train_removed, self.args.burn_in, 0, None)
+                np.save('./result/SGD/'+str(self.args.dataset)+'/retrain_noiseless/retrain_noiseless'+str(num_remove)+'.npy', accuracy_scratch_Dnew)
         else:
             print('check!')
 
@@ -307,6 +314,7 @@ def main():
     parser.add_argument('--paint_unlearning_sigma', type = int, default = 0, help = 'paint unlearning utility - sigma figure')
     parser.add_argument('--compare_baseline_nonconvergent', type = int, default = 0, help = 'compare with the baselines with nonconvergent calculation')
     parser.add_argument('--sequential', type = int, default = 0, help = 'sequential unlearni')
+    parser.add_argument('--retrain_noiseless', type = int, default = 0, help = 'retrain_noiseless')
     args = parser.parse_args()
     print(args)
     runner = Runner(args)
