@@ -1,6 +1,10 @@
 # SGD_Unlearning
 
-This is the official implementation of **Neurips 2024** paper [Stochastic Gradient Langevin Unlearning](https://arxiv.org/abs/2403.17105).
+This is the official implementation of **Neurips 2024** paper 
+
+[Stochastic Gradient Langevin Unlearning](https://arxiv.org/abs/2403.17105)
+
+By Eli Chien, Haoyu Wang, Ziang Chen and Pan Li.
 
 ## Environment requirements
 
