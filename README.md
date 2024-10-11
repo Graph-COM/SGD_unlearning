@@ -2,9 +2,13 @@
 
 This is the official implementation of **Neurips 2024** paper 
 
-[Stochastic Gradient Langevin Unlearning](https://arxiv.org/abs/2403.17105)
+[Certified Machine Unlearning via Noisy Stochastic Gradient Descent]([https://arxiv.org/abs/2401.10371](https://arxiv.org/abs/2403.17105))
 
 By Eli Chien, Haoyu Wang, Ziang Chen and Pan Li.
+
+Please also check our **NeurIPS 2024 Spotlight** paper
+
+[Langevin Unlearning: A New Perspective of Noisy Gradient Descent for Machine Unlearning](https://arxiv.org/abs/2401.10371)
 
 ## Environment requirements
 
