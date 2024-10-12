@@ -45,11 +45,9 @@ python main_sgd.py --lam 1e-6 --dataset [MNIST/CIFAR10] --projection 0 --sequent
 python main_sgd.py --lam 1e-6 --dataset [MNIST/CIFAR10] --projection 0 --paint_unlearning_sigma 1
 ````
 
-## To visualize the results as shown in the paper
+## Note
 
-please refer to ./result/Plotplace.ipynb
-
-* Notes: *use --gpu to allocate to a GPU device*
+* use --gpu to allocate to a GPU device*
 
 * /result/SGD saves the results we run and report in our paper
 
