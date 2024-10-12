@@ -47,7 +47,7 @@ python main_sgd.py --lam 1e-6 --dataset [MNIST/CIFAR10] --projection 0 --paint_u
 
 ## Note
 
-* use --gpu to allocate to a GPU device*
+* use --gpu to allocate to a GPU device
 
 * /result/SGD saves the results we run and report in our paper
 
