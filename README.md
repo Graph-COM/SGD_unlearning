@@ -51,6 +51,8 @@ please refer to ./result/Plotplace.ipynb
 
 * Notes: *use --gpu to allocate to a GPU device*
 
+* /result/SGD saves the results we run and report in our paper
+
 
 ## Citation
 
