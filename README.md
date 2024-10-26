@@ -56,10 +56,13 @@ python main_sgd.py --lam 1e-6 --dataset [MNIST/CIFAR10] --projection 0 --paint_u
 
 If you find our work useful, please cite us:
 ```
-@article{chien2024stochastic,
-  title={Stochastic Gradient Langevin Unlearning},
-  author={Chien, Eli and Wang, Haoyu and Chen, Ziang and Li, Pan},
-  journal={arXiv preprint arXiv:2403.17105},
-  year={2024}
+@misc{chien2024certifiedmachineunlearningnoisy,
+      title={Certified Machine Unlearning via Noisy Stochastic Gradient Descent}, 
+      author={Eli Chien and Haoyu Wang and Ziang Chen and Pan Li},
+      year={2024},
+      eprint={2403.17105},
+      archivePrefix={arXiv},
+      primaryClass={cs.LG},
+      url={https://arxiv.org/abs/2403.17105}, 
 }
 ```
